@@ -221,6 +221,67 @@ Back arrow, course name (bold), session status badge (green dot = active, amber 
 - Every API endpoint must have at least one happy-path test and one error-path test (wrong role, invalid input, edge case).
 - Do not claim a feature is complete until it has been manually tested in the browser and passes automated tests.
 
+## Verification Checklist (Run Before Marking Any Task Complete)
+
+Every feature is incomplete until all of the following pass. Do not stop after writing files.
+
+### Backend (run from /server)
+- [ ] `npm install` — confirm no missing or conflicting dependencies
+- [ ] `node -e "require('./server.js')"` or `npm run dev` — confirm server starts without errors
+- [ ] Manually import and instantiate any new models or utilities to catch schema errors early
+- [ ] Hit every new endpoint with a test request (curl or Supertest) — confirm correct status codes and response shape `{ success: true, data: {...} }` or `{ success: false, message: "..." }`
+- [ ] Confirm role enforcement: try each endpoint with the wrong role and verify 403, try with no token and verify 401
+
+### Frontend (run from /client)
+- [ ] `npm install` — confirm clean install
+- [ ] `npm run build` — must pass with zero TypeScript/ESLint errors
+- [ ] `npm run lint` — must pass with zero errors (warnings are acceptable)
+- [ ] `npm run dev` — confirm the dev server starts and the affected page renders without console errors
+- [ ] Manually test the UI flow in the browser for the feature you just built
+
+### Both
+- [ ] No hardcoded secrets, URIs, or credentials anywhere in new files
+- [ ] All new `.env` variables added to `.env.example` with placeholder values
+- [ ] Git status is clean — no unintentional files staged or left untracked
+
+
+## Feature Completion Criteria
+
+A feature is only "done" when ALL of the following are true:
+
+1. The implementation matches the PRD's behavioral spec for that feature
+2. The UI matches the Mockup's layout and uses only the design tokens defined in `## Design Tokens`
+3. The verification checklist above passes completely
+4. At least one happy-path and one error-path automated test exists for every new backend endpoint
+5. The GitHub Issue is referenced in the commit message with `[#N]` format
+6. No regressions — existing features still work after the change
+
+
+## Sprint 2 Additions and Notes
+
+These rules apply specifically to Sprint 2 features (issues #10–#17):
+
+### Supabase Realtime (Issue #12)
+- Use Supabase Realtime channels, not Socket.io, for live queue updates in Sprint 2
+- Channel naming follows the same convention as Socket.io rooms: `session:{sessionId}` and `user:{userId}`
+- Subscribe to channels on component mount, unsubscribe on unmount — always clean up listeners
+- Realtime events must mirror the Socket.io event names defined in `## Socket.io Conventions` for consistency
+- Test Realtime by opening two browser tabs simultaneously and confirming both update without refresh
+
+### Queue Logic (Issue #17)
+- Priority sort order is already defined in `## Queue Logic` — do not deviate from it
+- The wait time estimate must recalculate on every queue mutation and broadcast to all session subscribers
+- Cap the displayed wait time at "60+ min" — never show a raw number above 60
+
+### Analytics Dashboard (Issue #15)
+- All chart data is derived server-side and returned as pre-aggregated JSON — do not send raw question arrays to the client and aggregate on the frontend
+- CSV export: include question id, title, category, priority, status, submitted_at, resolved_at, claimed_by (TA name), resolution_note
+- Charts use Recharts — already in the client dependencies, do not add a second charting library
+
+### Knowledge Base (Issues #13 and #14)
+- Search is case-insensitive, matches on question title and description
+- Only resolved questions are searchable — never surface queued or in-progress questions in knowledge base results
+- The similar questions panel appears when the student's title input exceeds 5 characters (debounce the search call by 300ms)
 
 ## Do's
 
