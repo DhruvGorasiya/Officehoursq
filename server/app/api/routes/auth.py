@@ -22,17 +22,31 @@ async def register(req: RegisterRequest):
         })
         if not res.user or not res.session:
             return JSONResponse(status_code=400, content={"success": False, "message": "Registration failed or requires email confirmation."})
-            
-        user_meta = res.user.user_metadata
+
+        # Manually insert into public.users
+        try:
+            supabase.table("users").insert({
+                "id": res.user.id,
+                "email": req.email,
+                "name": req.name,
+                "role": req.role.value.lower(),
+            }).execute()
+        except Exception as db_err:
+            import traceback
+            traceback.print_exc()
+            return JSONResponse(status_code=400, content={"success": False, "message": f"Auth succeeded but profile creation failed: {str(db_err)}"})
+
         auth_res = AuthResponse(
             id=res.user.id,
             email=res.user.email,
-            name=user_meta.get("name", req.name),
-            role=user_meta.get("role", req.role.value),
+            name=req.name,
+            role=req.role.value,
             token=res.session.access_token
         )
         return {"success": True, "data": auth_res.model_dump()}
     except Exception as e:
+        import traceback
+        traceback.print_exc()
         return JSONResponse(status_code=400, content={"success": False, "message": str(e)})
 
 @router.post("/login")
@@ -89,4 +103,6 @@ async def get_me(user_payload: dict = Depends(get_current_user)):
         )
         return {"success": True, "data": auth_res.model_dump()}
     except Exception as e:
+        import traceback
+        traceback.print_exc()
         return JSONResponse(status_code=400, content={"success": False, "message": str(e)})
