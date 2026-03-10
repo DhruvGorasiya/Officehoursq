@@ -8,10 +8,27 @@ from datetime import datetime, timezone
 router = APIRouter()
 
 def recalculate_queue(session_id: str):
-    # Fetch active questions and re-order them 1 to N
-    res = supabase.table("questions").select("id").eq("session_id", session_id).in_("status", ["queued", "in_progress"]).order("queue_position").execute()
-    for i, q in enumerate(res.data):
-         supabase.table("questions").update({"queue_position": i + 1}).eq("id", q["id"]).execute()
+    """Re-sort and renumber all active queue positions for a session.
+    Sort: priority (high>medium>low), then created_at ASC.
+    Deferred questions always go to the absolute back, sorted by deferred_at ASC.
+    """
+    priority_map = {"high": 0, "medium": 1, "low": 2}
+
+    active = supabase.table("questions") \
+        .select("id, priority, created_at, status, deferred_at") \
+        .eq("session_id", session_id) \
+        .in_("status", ["queued", "in_progress", "deferred"]) \
+        .execute()
+
+    non_deferred = [q for q in active.data if q["status"] != "deferred"]
+    deferred = [q for q in active.data if q["status"] == "deferred"]
+
+    non_deferred.sort(key=lambda q: (priority_map.get(q["priority"], 2), q["created_at"]))
+    deferred.sort(key=lambda q: q["deferred_at"] or q["created_at"])
+
+    ordered = non_deferred + deferred
+    for i, q in enumerate(ordered):
+        supabase.table("questions").update({"queue_position": i + 1}).eq("id", q["id"]).execute()
 
 @router.post("")
 async def create_question(req: QuestionCreate, user: dict = Depends(require_role("student"))):
@@ -29,8 +46,8 @@ async def create_question(req: QuestionCreate, user: dict = Depends(require_role
         if existing.data:
             return JSONResponse(status_code=400, content={"success": False, "message": "You already have an active question in this session"})
             
-        # Calculate queue position
-        current_queue = supabase.table("questions").select("id").eq("session_id", session_id).in_("status", ["queued", "in_progress"]).execute()
+        # Calculate queue position (include deferred since they occupy queue slots)
+        current_queue = supabase.table("questions").select("id").eq("session_id", session_id).in_("status", ["queued", "in_progress", "deferred"]).execute()
         queue_pos = len(current_queue.data) + 1
         
         q_data = req.model_dump()
@@ -97,7 +114,7 @@ async def update_question(q_id: str, req: QuestionUpdate, user: dict = Depends(r
 async def claim_question(q_id: str, user: dict = Depends(require_role("ta", "professor"))):
     try:
         q_res = supabase.table("questions").select("status").eq("id", q_id).single().execute()
-        if not q_res.data or q_res.data["status"] != "queued":
+        if not q_res.data or q_res.data["status"] not in ["queued", "deferred"]:
             return JSONResponse(status_code=400, content={"success": False, "message": "Question is not queued"})
             
         update_data = {
@@ -114,7 +131,7 @@ async def claim_question(q_id: str, user: dict = Depends(require_role("ta", "pro
 async def resolve_question(q_id: str, req: QuestionResolve, user: dict = Depends(require_role("ta", "professor"))):
     try:
         q_res = supabase.table("questions").select("status, session_id").eq("id", q_id).single().execute()
-        if not q_res.data or q_res.data["status"] not in ["queued", "in_progress"]:
+        if not q_res.data or q_res.data["status"] not in ["queued", "in_progress", "deferred"]:
             return JSONResponse(status_code=400, content={"success": False, "message": "Question cannot be resolved"})
             
         update_data = {
@@ -136,20 +153,16 @@ async def defer_question(q_id: str, user: dict = Depends(require_role("ta", "pro
         if not q_res.data or q_res.data["status"] not in ["queued", "in_progress"]:
             return JSONResponse(status_code=400, content={"success": False, "message": "Question cannot be deferred"})
             
-        # Put at back of queue
         session_id = q_res.data["session_id"]
-        current_queue = supabase.table("questions").select("id").eq("session_id", session_id).in_("status", ["queued", "in_progress"]).execute()
-        new_pos = len(current_queue.data) + 1 # Even though it's already in the queue, we'll assign it to the end and recalculate handles gaps
-        
+
         update_data = {
-            "status": "queued", # Or deferred? PRD says "sets status to deferred, then immediately re-queues at back". The queue includes queued and in_progress? Wait, if it's deferred, does it stay in queue? Usually deferred implies it's lower priority now, or it becomes "queued" again but at the end. PRD: "sets status to deferred, then immediately re-queues at back. Clears claimed_by, sets deferred_at". I will keep status as queued to signify it's back in queue, but with deferred_at set. Oh, PRD says "sets status to deferred". So let's include deferred in active queue.
+            "status": "deferred",
             "claimed_by": None,
+            "claimed_at": None,
             "deferred_at": datetime.now(timezone.utc).isoformat(),
-            "queue_position": new_pos
         }
         res = supabase.table("questions").update(update_data).eq("id", q_id).execute()
-        
-        # We need deferred in recalculate if they are in queue. Let's assume PRD means status='deferred' is just a specialized 'queued'. 
+        recalculate_queue(session_id)
         return {"success": True, "data": res.data[0]}
     except Exception as e:
         return JSONResponse(status_code=400, content={"success": False, "message": str(e)})
@@ -162,7 +175,7 @@ async def withdraw_question(q_id: str, user: dict = Depends(require_role("studen
             return JSONResponse(status_code=404, content={"success": False, "message": "Question not found"})
         if q_res.data["student_id"] != user["sub"]:
             return JSONResponse(status_code=403, content={"success": False, "message": "Not authorized"})
-        if q_res.data["status"] not in ["queued", "in_progress"]:
+        if q_res.data["status"] not in ["queued", "in_progress", "deferred"]:
             return JSONResponse(status_code=400, content={"success": False, "message": "Cannot withdraw from current status"})
             
         update_data = {

@@ -46,6 +46,39 @@ async def list_sessions(course_id: str, user: dict = Depends(get_current_user)):
     except Exception as e:
         return JSONResponse(status_code=400, content={"success": False, "message": str(e)})
 
+@router.get("/{session_id}")
+async def get_session(session_id: str, user: dict = Depends(get_current_user)):
+    try:
+        session_res = supabase.table("sessions").select("*, courses(name, professor_id)").eq("id", session_id).single().execute()
+        if not session_res.data:
+            return JSONResponse(status_code=404, content={"success": False, "message": "Session not found"})
+
+        session_data = session_res.data
+        course = session_data.pop("courses", {}) or {}
+        course_name = course.get("name", "")
+        professor_id = course.get("professor_id", "")
+
+        user_id = user["sub"]
+        if professor_id != user_id:
+            enroll_res = supabase.table("course_enrollments").select("id").eq("course_id", session_data["course_id"]).eq("user_id", user_id).execute()
+            if not enroll_res.data:
+                return JSONResponse(status_code=403, content={"success": False, "message": "Not enrolled in this course"})
+
+        ta_res = supabase.table("session_ta_assignments").select("ta_id, users!session_ta_assignments_ta_id_fkey(id, name, email)").eq("session_id", session_id).execute()
+        tas = []
+        for row in ta_res.data:
+            u = row.get("users")
+            if u:
+                tas.append({"id": u["id"], "name": u["name"], "email": u["email"]})
+
+        session_data["course_name"] = course_name
+        session_data["tas"] = tas
+        return {"success": True, "data": session_data}
+    except Exception as e:
+        if "contains 0 rows" in str(e):
+            return JSONResponse(status_code=404, content={"success": False, "message": "Session not found"})
+        return JSONResponse(status_code=400, content={"success": False, "message": str(e)})
+
 @router.put("/{session_id}")
 async def update_session(
     session_id: str,
@@ -129,11 +162,11 @@ async def update_session_status(
             if existing_active.data:
                 return JSONResponse(status_code=400, content={"success": False, "message": "Another active session exists for this course"})
         elif new_status == "ended" and old_status == "active":
-            # Mark remaining questions as resolved
             supabase.table("questions").update({
-                "status": "resolved",
-                "resolution_note": "Session ended without resolution"
-            }).eq("session_id", session_id).neq("status", "resolved").neq("status", "withdrawn").execute()
+                "status": "unresolved",
+                "resolution_note": "Session ended without resolution",
+                "queue_position": -1
+            }).eq("session_id", session_id).in_("status", ["queued", "in_progress", "deferred"]).execute()
         else:
             return JSONResponse(status_code=400, content={"success": False, "message": f"Invalid transition from {old_status} to {new_status}"})
             

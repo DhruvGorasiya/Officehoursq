@@ -20,8 +20,17 @@ async def register(req: RegisterRequest):
                 }
             }
         })
-        if not res.user or not res.session:
-            return JSONResponse(status_code=400, content={"success": False, "message": "Registration failed or requires email confirmation."})
+        if not res.user:
+            return JSONResponse(status_code=400, content={"success": False, "message": "Registration failed."})
+
+        if not res.session:
+            return JSONResponse(status_code=200, content={
+                "success": True,
+                "data": {
+                    "requires_confirmation": True,
+                    "message": "Check your email to confirm your account before logging in."
+                }
+            })
 
         # Manually insert into public.users
         try:
