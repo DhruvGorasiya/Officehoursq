@@ -1,39 +1,42 @@
--- Drop everything in correct dependency order
-DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
-DROP FUNCTION IF EXISTS public.handle_new_user();
+-- OfficeHoursQ - Core Sprint 1 Schema
+-- Extends 001_initial_schema.sql with sessions, session TA assignments, and questions.
 
-DROP POLICY IF EXISTS "Questions are viewable by everyone" ON public.questions;
-DROP POLICY IF EXISTS "Anyone can insert questions" ON public.questions;
-DROP POLICY IF EXISTS "Anyone can update questions" ON public.questions;
-DROP POLICY IF EXISTS "Anyone can delete questions" ON public.questions;
-DROP POLICY IF EXISTS "Assignments are viewable by everyone" ON public.session_ta_assignments;
-DROP POLICY IF EXISTS "Anyone can insert assignments" ON public.session_ta_assignments;
-DROP POLICY IF EXISTS "Anyone can delete assignments" ON public.session_ta_assignments;
-DROP POLICY IF EXISTS "Sessions are viewable by everyone" ON public.sessions;
-DROP POLICY IF EXISTS "Anyone can insert sessions" ON public.sessions;
-DROP POLICY IF EXISTS "Anyone can update sessions" ON public.sessions;
-DROP POLICY IF EXISTS "Anyone can delete sessions" ON public.sessions;
-DROP POLICY IF EXISTS "Users are viewable by everyone" ON public.users;
-DROP POLICY IF EXISTS "Users can update own profile" ON public.users;
-DROP POLICY IF EXISTS "Anyone can insert users" ON public.users;
-DROP POLICY IF EXISTS "Courses are viewable by everyone" ON public.courses;
-DROP POLICY IF EXISTS "Anyone can insert courses" ON public.courses;
-DROP POLICY IF EXISTS "Enrollments are viewable by everyone" ON public.course_enrollments;
-DROP POLICY IF EXISTS "Anyone can insert enrollments" ON public.course_enrollments;
+-- Drop everything in correct dependency order (idempotent for local dev)
+-- DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
+-- DROP FUNCTION IF EXISTS public.handle_new_user();
 
-DROP TABLE IF EXISTS public.questions;
-DROP TABLE IF EXISTS public.session_ta_assignments;
-DROP TABLE IF EXISTS public.sessions;
-DROP TABLE IF EXISTS public.course_enrollments;
-DROP TABLE IF EXISTS public.courses;
-DROP TABLE IF EXISTS public.users;
+-- DROP POLICY IF EXISTS "Questions are viewable by everyone" ON public.questions;
+-- DROP POLICY IF EXISTS "Anyone can insert questions" ON public.questions;
+-- DROP POLICY IF EXISTS "Anyone can update questions" ON public.questions;
+-- DROP POLICY IF EXISTS "Anyone can delete questions" ON public.questions;
+-- DROP POLICY IF EXISTS "Assignments are viewable by everyone" ON public.session_ta_assignments;
+-- DROP POLICY IF EXISTS "Anyone can insert assignments" ON public.session_ta_assignments;
+-- DROP POLICY IF EXISTS "Anyone can delete assignments" ON public.session_ta_assignments;
+-- DROP POLICY IF EXISTS "Sessions are viewable by everyone" ON public.sessions;
+-- DROP POLICY IF EXISTS "Anyone can insert sessions" ON public.sessions;
+-- DROP POLICY IF EXISTS "Anyone can update sessions" ON public.sessions;
+-- DROP POLICY IF EXISTS "Anyone can delete sessions" ON public.sessions;
+-- DROP POLICY IF EXISTS "Users are viewable by everyone" ON public.users;
+-- DROP POLICY IF EXISTS "Users can update own profile" ON public.users;
+-- DROP POLICY IF EXISTS "Anyone can insert users" ON public.users;
+-- DROP POLICY IF EXISTS "Courses are viewable by everyone" ON public.courses;
+-- DROP POLICY IF EXISTS "Anyone can insert courses" ON public.courses;
+-- DROP POLICY IF EXISTS "Enrollments are viewable by everyone" ON public.course_enrollments;
+-- DROP POLICY IF EXISTS "Anyone can insert enrollments" ON public.course_enrollments;
 
-DROP TYPE IF EXISTS question_category;
-DROP TYPE IF EXISTS question_priority;
-DROP TYPE IF EXISTS question_status;
-DROP TYPE IF EXISTS session_status;
-DROP TYPE IF EXISTS enrollment_role;
-DROP TYPE IF EXISTS user_role;
+-- DROP TABLE IF EXISTS public.questions;
+-- DROP TABLE IF EXISTS public.session_ta_assignments;
+-- DROP TABLE IF EXISTS public.sessions;
+-- DROP TABLE IF EXISTS public.course_enrollments;
+-- DROP TABLE IF EXISTS public.courses;
+-- DROP TABLE IF EXISTS public.users;
+
+-- DROP TYPE IF EXISTS question_category;
+-- DROP TYPE IF EXISTS question_priority;
+-- DROP TYPE IF EXISTS question_status;
+-- DROP TYPE IF EXISTS session_status;
+-- DROP TYPE IF EXISTS enrollment_role;
+-- DROP TYPE IF EXISTS user_role;
 
 -- Enum types
 CREATE TYPE user_role AS ENUM ('student', 'ta', 'professor');
@@ -146,3 +149,4 @@ CREATE POLICY "Questions are viewable by everyone" ON public.questions FOR SELEC
 CREATE POLICY "Anyone can insert questions" ON public.questions FOR INSERT WITH CHECK (true);
 CREATE POLICY "Anyone can update questions" ON public.questions FOR UPDATE USING (true);
 CREATE POLICY "Anyone can delete questions" ON public.questions FOR DELETE USING (true);
+
