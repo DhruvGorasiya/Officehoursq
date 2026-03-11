@@ -182,6 +182,16 @@ export default function SessionView() {
                 </span>
               )}
             </p>
+            {sessionInfo?.course_id && (
+              <div className="mt-2">
+                <Link
+                  href={`/courses/${sessionInfo.course_id}/knowledge-base`}
+                  className="text-xs text-text-muted underline-offset-2 hover:underline hover:text-text-primary"
+                >
+                  View course knowledge base
+                </Link>
+              </div>
+            )}
           </div>
 
           {user?.role === 'professor' && (
@@ -214,6 +224,7 @@ export default function SessionView() {
               onSuccess={fetchSessionAndQuestions}
               activeQuestion={activeQuestion}
               onWithdraw={(id) => handleAction('withdraw', id)}
+              courseId={sessionInfo?.course_id}
             />
           </div>
         ) : (

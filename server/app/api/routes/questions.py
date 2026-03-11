@@ -278,3 +278,59 @@ async def withdraw_question(q_id: str, user: dict = Depends(require_role("studen
         return {"success": True, "data": updated}
     except Exception as e:
         return JSONResponse(status_code=400, content={"success": False, "message": str(e)})
+
+
+@router.post("/{q_id}/helpful")
+async def mark_question_helpful(q_id: str, user: dict = Depends(require_role("student"))):
+    try:
+        student_id = user["sub"]
+
+        # Ensure question exists and is resolved
+        q_res = (
+            supabase.table("questions")
+            .select("id, status, course_id, helpful_votes")
+            .eq("id", q_id)
+            .single()
+            .execute()
+        )
+        if not q_res.data:
+            return JSONResponse(
+                status_code=404,
+                content={"success": False, "message": "Question not found"},
+            )
+        if q_res.data["status"] != "resolved":
+            return JSONResponse(
+                status_code=400,
+                content={
+                    "success": False,
+                    "message": "Only resolved questions can be marked helpful",
+                },
+            )
+
+        # Insert helpful vote (one per student per question enforced by DB unique constraint)
+        try:
+            supabase.table("helpful_votes").insert(
+                {"question_id": q_res.data["id"], "student_id": student_id}
+            ).execute()
+        except Exception as e:
+            # Assume any insert error here is due to unique constraint (already voted)
+            return JSONResponse(
+                status_code=400,
+                content={"success": False, "message": "Already voted helpful"},
+            )
+
+        # Increment helpful_votes counter on questions table
+        new_count = (q_res.data.get("helpful_votes") or 0) + 1
+        update_res = (
+            supabase.table("questions")
+            .update({"helpful_votes": new_count})
+            .eq("id", q_id)
+            .execute()
+        )
+        updated = update_res.data[0] if update_res.data else None
+
+        return {"success": True, "data": updated or {"id": q_id, "helpful_votes": new_count}}
+    except Exception as e:
+        return JSONResponse(
+            status_code=400, content={"success": False, "message": str(e)}
+        )

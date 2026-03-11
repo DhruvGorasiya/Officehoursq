@@ -1,8 +1,10 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { CheckCircle, Edit, Trash2, X } from "lucide-react";
+import SimilarQuestionsPanel from "./SimilarQuestionsPanel";
+import { fetchSimilarQuestions } from "@/lib/knowledgeBaseApi";
 
 const API_URL =
   process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api/v1";
@@ -12,6 +14,7 @@ interface QuestionSubmissionFormProps {
   onSuccess: () => void;
   activeQuestion: any | null;
   onWithdraw: (id: string) => void;
+  courseId?: string;
 }
 
 export default function QuestionSubmissionForm({
@@ -19,6 +22,7 @@ export default function QuestionSubmissionForm({
   onSuccess,
   activeQuestion,
   onWithdraw,
+  courseId,
 }: QuestionSubmissionFormProps) {
   const { token } = useAuth();
   const [title, setTitle] = useState("");
@@ -33,6 +37,12 @@ export default function QuestionSubmissionForm({
   const [error, setError] = useState("");
   const [isEditing, setIsEditing] = useState(false);
 
+  const [showSimilarPanel, setShowSimilarPanel] = useState(true);
+  const [similarLoading, setSimilarLoading] = useState(false);
+  const [similarError, setSimilarError] = useState<string | null>(null);
+  const [similarQuestions, setSimilarQuestions] = useState<any[]>([]);
+  const [debounceTimer, setDebounceTimer] = useState<NodeJS.Timeout | null>(null);
+
   useEffect(() => {
     if (isEditing && activeQuestion) {
       setTitle(activeQuestion.title || "");
@@ -45,6 +55,63 @@ export default function QuestionSubmissionForm({
     }
   }, [isEditing, activeQuestion]);
 
+  const maybeFetchSimilar = useCallback(
+    (currentTitle: string) => {
+      if (!token || !courseId || !showSimilarPanel || currentTitle.length <= 5) {
+        setSimilarQuestions([]);
+        setSimilarError(null);
+        setSimilarLoading(false);
+        return;
+      }
+
+      setSimilarLoading(true);
+      setSimilarError(null);
+
+      fetchSimilarQuestions({
+        courseId,
+        title: currentTitle,
+        token,
+      })
+        .then((res) => {
+          if (res.success && Array.isArray(res.data)) {
+            setSimilarQuestions(res.data);
+          } else {
+            setSimilarQuestions([]);
+          }
+        })
+        .catch(() => {
+          setSimilarError("Could not load similar questions.");
+        })
+        .finally(() => {
+          setSimilarLoading(false);
+        });
+    },
+    [token, courseId, showSimilarPanel]
+  );
+
+  useEffect(() => {
+    if (!showSimilarPanel) return;
+
+    if (debounceTimer) {
+      clearTimeout(debounceTimer);
+    }
+
+    const timer = setTimeout(() => {
+      if (title && title.length > 5) {
+        maybeFetchSimilar(title);
+      } else {
+        setSimilarQuestions([]);
+        setSimilarError(null);
+      }
+    }, 400);
+
+    setDebounceTimer(timer);
+
+    return () => {
+      clearTimeout(timer);
+    };
+  }, [title, maybeFetchSimilar, showSimilarPanel]);
+
   const resetForm = () => {
     setTitle("");
     setDescription("");
@@ -54,6 +121,9 @@ export default function QuestionSubmissionForm({
     setCategory("debugging");
     setPriority("low");
     setError("");
+    setShowSimilarPanel(true);
+    setSimilarQuestions([]);
+    setSimilarError(null);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -221,6 +291,15 @@ export default function QuestionSubmissionForm({
         <div className="text-red text-sm mb-4 bg-red/10 p-3 rounded-input border border-red/20">
           {error}
         </div>
+      )}
+
+      {showSimilarPanel && courseId && (
+        <SimilarQuestionsPanel
+          questions={similarQuestions}
+          loading={similarLoading}
+          error={similarError}
+          onDismiss={() => setShowSimilarPanel(false)}
+        />
       )}
 
       <form onSubmit={handleSubmit} className="space-y-4">

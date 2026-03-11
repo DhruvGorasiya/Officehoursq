@@ -131,22 +131,35 @@ export default function CourseDetail() {
           <ArrowLeft className="w-4 h-4" /> Back to Dashboard
         </Link>
 
-        <div className="flex justify-between items-center mb-8 pb-6 border-b border-border">
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-8 pb-6 border-b border-border">
           <div>
             <h1 className="text-3xl font-bold text-text-primary mb-2">{course?.name}</h1>
             {user?.role === 'professor' && (
-              <p className="text-sm text-text-muted">Invite Code: <span className="font-mono bg-surface border border-border px-2 py-1 rounded text-accent tracking-wider ml-1">{course?.invite_code}</span></p>
+              <p className="text-sm text-text-muted">
+                Invite Code:{" "}
+                <span className="font-mono bg-surface border border-border px-2 py-1 rounded text-accent tracking-wider ml-1">
+                  {course?.invite_code}
+                </span>
+              </p>
             )}
           </div>
-          {user?.role === 'professor' && (
-            <button
-              onClick={() => setShowCreateModal(true)}
-              className="flex items-center gap-2 bg-accent hover:bg-accent/90 text-white px-4 py-2 rounded-input font-medium transition-colors"
+          <div className="flex flex-wrap items-center gap-3">
+            <Link
+              href={`/courses/${courseId}/knowledge-base`}
+              className="px-4 py-2 rounded-input border border-border text-sm font-medium text-text-secondary hover:text-text-primary hover:border-text-muted transition-colors"
             >
-              <Plus className="w-5 h-5" />
-              Create Session
-            </button>
-          )}
+              Knowledge Base
+            </Link>
+            {user?.role === 'professor' && (
+              <button
+                onClick={() => setShowCreateModal(true)}
+                className="flex items-center gap-2 bg-accent hover:bg-accent/90 text-white px-4 py-2 rounded-input font-medium transition-colors"
+              >
+                <Plus className="w-5 h-5" />
+                Create Session
+              </button>
+            )}
+          </div>
         </div>
 
         <h2 className="text-xl font-bold text-text-primary mb-4">Sessions</h2>
