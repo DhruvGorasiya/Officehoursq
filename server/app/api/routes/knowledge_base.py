@@ -61,23 +61,51 @@ async def search_knowledge_base(
             .eq("course_id", course_id)
         )
 
-        if search:
-            query = query.text_search("search_vector", search, options={"type": "websearch"})
+        is_search = bool(search and search.strip())
+
+        if search and search.strip():
+            # Use ILIKE across title, description, resolution_note so short or partial terms
+            # (e.g. "uni") match substrings (e.g. "unit", "university"). Full-text search
+            # often drops or fails to match short tokens, so ILIKE gives predictable results.
+            term = search.strip()
+            # Escape ILIKE special chars so % and _ are literal
+            escaped = term.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
+            pattern = f"%{escaped}%"
+            query = query.or_(
+                f"title.ilike.{pattern},description.ilike.{pattern},resolution_note.ilike.{pattern}"
+            )
 
         if category:
             query = query.eq("category", category)
 
-        query = (
-            query
-            .order("helpful_votes", desc=True)
-            .order("resolved_at", desc=True)
-            .range(offset, offset + PAGE_SIZE - 1)
-        )
+        if is_search:
+            # .or_() builder may not support .order()/.range(), so sort and paginate in Python.
+            res = query.execute()
+            rows = res.data or []
 
-        res = query.execute()
+            # Sort by helpful_votes DESC, then resolved_at DESC (fallback to created_at).
+            def sort_key(r):
+                hv = r.get("helpful_votes") or 0
+                resolved_at = r.get("resolved_at") or r.get("created_at")
+                return (-hv, resolved_at or "")
+
+            rows.sort(key=sort_key)
+            total_count = len(rows)
+            paged_rows = rows[offset : offset + PAGE_SIZE]
+        else:
+            # Non-search path can use PostgREST ordering and server-side pagination.
+            query = (
+                query
+                .order("helpful_votes", desc=True)
+                .order("resolved_at", desc=True)
+                .range(offset, offset + PAGE_SIZE - 1)
+            )
+            res = query.execute()
+            paged_rows = res.data or []
+            total_count = res.count if res.count is not None else len(paged_rows)
 
         items = []
-        for row in res.data:
+        for row in paged_rows:
             student_info = row.pop("student", None)
             row["student_name"] = student_info.get("name") if student_info else None
             items.append(row)
@@ -87,7 +115,7 @@ async def search_knowledge_base(
             "data": items,
             "page": page,
             "page_size": PAGE_SIZE,
-            "total_count": res.count if res.count is not None else len(items),
+            "total_count": total_count,
         }
     except Exception as e:
         return JSONResponse(
