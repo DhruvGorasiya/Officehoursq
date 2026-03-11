@@ -38,8 +38,8 @@ async def create_question(req: QuestionCreate, user: dict = Depends(require_role
         session_id = req.session_id
         student_id = user["sub"]
         
-        # Check if session is active
-        session_res = supabase.table("sessions").select("status").eq("id", session_id).single().execute()
+        # Check if session is active and get course_id for denormalized storage
+        session_res = supabase.table("sessions").select("status, course_id").eq("id", session_id).single().execute()
         if not session_res.data or session_res.data["status"] != "active":
             return JSONResponse(status_code=400, content={"success": False, "message": "Session is not active"})
             
@@ -54,6 +54,7 @@ async def create_question(req: QuestionCreate, user: dict = Depends(require_role
         
         q_data = req.model_dump()
         q_data["student_id"] = student_id
+        q_data["course_id"] = session_res.data["course_id"]
         q_data["status"] = "queued"
         q_data["queue_position"] = queue_pos
         

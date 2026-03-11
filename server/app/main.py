@@ -2,7 +2,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.core.config import settings
-from app.api.routes import health, auth, courses, sessions, questions
+from app.api.routes import health, auth, courses, sessions, questions, knowledge_base
 
 app = FastAPI(
     title=settings.PROJECT_NAME,
@@ -22,6 +22,7 @@ app.include_router(auth.router, prefix=f"{settings.API_V1_PREFIX}/auth", tags=["
 app.include_router(courses.router, prefix=f"{settings.API_V1_PREFIX}/courses", tags=["courses"])
 app.include_router(sessions.router, prefix=f"{settings.API_V1_PREFIX}/sessions", tags=["sessions"])
 app.include_router(questions.router, prefix=f"{settings.API_V1_PREFIX}/questions", tags=["questions"])
+app.include_router(knowledge_base.router, prefix=f"{settings.API_V1_PREFIX}/knowledge-base", tags=["knowledge-base"])
 
 @app.get("/")
 async def root():
