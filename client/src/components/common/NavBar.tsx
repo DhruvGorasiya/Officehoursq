@@ -1,20 +1,20 @@
-'use client';
+"use client";
 
-import React from 'react';
-import Link from 'next/link';
-import { useAuth } from '@/context/AuthContext';
-import { Bell } from 'lucide-react';
+import React from "react";
+import Link from "next/link";
+import { useAuth } from "@/context/AuthContext";
+import { Bell } from "lucide-react";
 
 interface NavBarProps {
   title?: string;
-  statusBadge?: 'active' | 'scheduled' | null;
+  statusBadge?: "active" | "scheduled" | null;
 }
 
-export default function NavBar({ title = 'OfficeHoursQ', statusBadge = null }: NavBarProps) {
-  const { user, logout } = useAuth();
+export default function NavBar({ title = "OfficeHoursQ", statusBadge = null }: NavBarProps) {
+  const { user, logout, unreadCount } = useAuth();
   
   const getInitials = (name: string) => {
-    return name.split(' ').map((n) => n[0]).join('').substring(0, 2).toUpperCase();
+    return name.split(" ").map((n) => n[0]).join("").substring(0, 2).toUpperCase();
   };
 
   return (
@@ -25,13 +25,13 @@ export default function NavBar({ title = 'OfficeHoursQ', statusBadge = null }: N
           {title}
         </Link>
         
-        {statusBadge === 'active' && (
+        {statusBadge === "active" && (
           <div className="flex items-center gap-2 px-3 py-1 bg-green/10 text-green rounded-badge text-sm font-medium">
             <span className="w-2 h-2 rounded-full bg-green" />
             Active
           </div>
         )}
-        {statusBadge === 'scheduled' && (
+        {statusBadge === "scheduled" && (
           <div className="flex items-center gap-2 px-3 py-1 bg-amber/10 text-amber rounded-badge text-sm font-medium">
             <span className="w-2 h-2 rounded-full bg-amber" />
             Scheduled
@@ -42,10 +42,11 @@ export default function NavBar({ title = 'OfficeHoursQ', statusBadge = null }: N
       <div className="flex items-center gap-6">
         <button className="relative text-text-secondary hover:text-text-primary transition-colors">
           <Bell className="w-5 h-5" />
-          {/* Example notification badge */}
-          <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-badge bg-red text-[10px] font-bold text-white">
-            2
-          </span>
+          {unreadCount > 0 && (
+            <span className="absolute -top-1 -right-1 flex h-4 min-w-4 px-1 items-center justify-center rounded-badge bg-red text-[10px] font-bold text-white">
+              {unreadCount > 9 ? "9+" : unreadCount}
+            </span>
+          )}
         </button>
 
         {user ? (

@@ -1,8 +1,10 @@
 from fastapi import APIRouter, Depends
 from fastapi.responses import JSONResponse
+
 from app.schemas.sessions import SessionCreate, SessionUpdate, SessionStatusUpdate
 from app.core.database import supabase
 from app.core.deps import get_current_user, require_role
+from app.utils.realtime_broadcast import broadcast_course_session_status, broadcast_session_event
 
 router = APIRouter()
 
@@ -171,6 +173,21 @@ async def update_session_status(
             return JSONResponse(status_code=400, content={"success": False, "message": f"Invalid transition from {old_status} to {new_status}"})
             
         res = supabase.table("sessions").update({"status": new_status}).eq("id", session_id).execute()
-        return {"success": True, "data": res.data[0]}
+        updated = res.data[0]
+
+        # Broadcast course-level session status update
+        broadcast_course_session_status(
+            course_id=course_id,
+            payload={"session": updated},
+        )
+
+        # Also broadcast at the session level so connected clients can react
+        broadcast_session_event(
+            session_id=session_id,
+            event="session:updated",
+            payload={"session": updated},
+        )
+
+        return {"success": True, "data": updated}
     except Exception as e:
         return JSONResponse(status_code=400, content={"success": False, "message": str(e)})

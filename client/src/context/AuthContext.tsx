@@ -1,7 +1,8 @@
-'use client';
+"use client";
 
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { useRouter } from 'next/navigation';
+import React, { createContext, useContext, useState, useEffect, ReactNode } from "react";
+import { useRouter } from "next/navigation";
+import { useRealtimeChannel } from "@/hooks/useRealtimeChannel";
 
 export interface User {
   id: string;
@@ -14,6 +15,7 @@ interface AuthContextType {
   user: User | null;
   token: string | null;
   loading: boolean;
+  unreadCount: number;
   login: (token: string, user: User) => void;
   logout: () => void;
   revalidate: () => Promise<void>;
@@ -25,11 +27,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   const [token, setToken] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+   const [unreadCount, setUnreadCount] = useState(0);
   const router = useRouter();
 
   useEffect(() => {
     // Check for stored token and fetch user on mount
-    const storedToken = localStorage.getItem('token');
+    const storedToken = localStorage.getItem("token");
     if (storedToken) {
       setToken(storedToken);
       fetchUser(storedToken);
@@ -40,9 +43,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const fetchUser = async (authToken: string) => {
     try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api/v1'}/auth/me`, {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api/v1"}/auth/me`, {
         headers: {
-          'Authorization': `Bearer ${authToken}`
+          "Authorization": `Bearer ${authToken}`
         }
       });
       const data = await response.json();
@@ -50,12 +53,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         setUser(data.data as User);
       } else {
         // Token might be invalid or expired
-        localStorage.removeItem('token');
+        localStorage.removeItem("token");
         setToken(null);
       }
     } catch (error) {
-      console.error('Error fetching user:', error);
-      localStorage.removeItem('token');
+      console.error("Error fetching user:", error);
+      localStorage.removeItem("token");
       setToken(null);
     } finally {
       setLoading(false);
@@ -63,16 +66,17 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const login = (authToken: string, userData: User) => {
-    localStorage.setItem('token', authToken);
+    localStorage.setItem("token", authToken);
     setToken(authToken);
     setUser(userData);
   };
 
   const logout = () => {
-    localStorage.removeItem('token');
+    localStorage.removeItem("token");
     setToken(null);
     setUser(null);
-    router.push('/login');
+    setUnreadCount(0);
+    router.push("/login");
   };
 
   const revalidate = async () => {
@@ -81,8 +85,18 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
+  // Realtime: subscribe to user-specific notification channel when logged in
+  useRealtimeChannel(
+    user ? `user:${user.id}` : null,
+    {
+      onNotificationEvent: () => {
+        setUnreadCount((prev) => prev + 1);
+      },
+    }
+  );
+
   return (
-    <AuthContext.Provider value={{ user, token, loading, login, logout, revalidate }}>
+    <AuthContext.Provider value={{ user, token, loading, unreadCount, login, logout, revalidate }}>
       {children}
     </AuthContext.Provider>
   );

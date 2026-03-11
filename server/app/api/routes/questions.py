@@ -1,9 +1,11 @@
 from fastapi import APIRouter, Depends
 from fastapi.responses import JSONResponse
+from datetime import datetime, timezone
+
 from app.schemas.questions import QuestionCreate, QuestionUpdate, QuestionResolve
 from app.core.database import supabase
 from app.core.deps import get_current_user, require_role
-from datetime import datetime, timezone
+from app.utils.realtime_broadcast import broadcast_session_event, broadcast_user_notification
 
 router = APIRouter()
 
@@ -56,7 +58,16 @@ async def create_question(req: QuestionCreate, user: dict = Depends(require_role
         q_data["queue_position"] = queue_pos
         
         res = supabase.table("questions").insert(q_data).execute()
-        return {"success": True, "data": res.data[0]}
+        created = res.data[0]
+
+        # Broadcast: new question in session queue
+        broadcast_session_event(
+            session_id=session_id,
+            event="question:submitted",
+            payload={"question": created},
+        )
+
+        return {"success": True, "data": created}
     except Exception as e:
         return JSONResponse(status_code=400, content={"success": False, "message": str(e)})
 
@@ -123,7 +134,30 @@ async def claim_question(q_id: str, user: dict = Depends(require_role("ta", "pro
             "claimed_at": datetime.now(timezone.utc).isoformat()
         }
         res = supabase.table("questions").update(update_data).eq("id", q_id).execute()
-        return {"success": True, "data": res.data[0]}
+        updated = res.data[0]
+
+        # Broadcast: question claimed / queue updated
+        session_id = updated.get("session_id")
+        if session_id:
+            broadcast_session_event(
+                session_id=session_id,
+                event="question:claimed",
+                payload={"question": updated},
+            )
+
+        # Optionally notify the student who asked the question
+        student_id = updated.get("student_id")
+        if student_id:
+            broadcast_user_notification(
+                user_id=student_id,
+                payload={
+                    "type": "question_claimed",
+                    "question_id": updated.get("id"),
+                    "session_id": session_id,
+                },
+            )
+
+        return {"success": True, "data": updated}
     except Exception as e:
         return JSONResponse(status_code=400, content={"success": False, "message": str(e)})
 
@@ -138,11 +172,34 @@ async def resolve_question(q_id: str, req: QuestionResolve, user: dict = Depends
             "status": "resolved",
             "resolution_note": req.resolution_note,
             "resolved_at": datetime.now(timezone.utc).isoformat(),
-            "queue_position": -1 # removed from queue
+            "queue_position": -1  # removed from queue
         }
         res = supabase.table("questions").update(update_data).eq("id", q_id).execute()
-        recalculate_queue(q_res.data["session_id"])
-        return {"success": True, "data": res.data[0]}
+        updated = res.data[0]
+
+        session_id = q_res.data["session_id"]
+        recalculate_queue(session_id)
+
+        # Broadcast: question resolved / queue updated
+        broadcast_session_event(
+            session_id=session_id,
+            event="question:resolved",
+            payload={"question": updated},
+        )
+
+        # Notify student
+        student_id = updated.get("student_id")
+        if student_id:
+            broadcast_user_notification(
+                user_id=student_id,
+                payload={
+                    "type": "question_resolved",
+                    "question_id": updated.get("id"),
+                    "session_id": session_id,
+                },
+            )
+
+        return {"success": True, "data": updated}
     except Exception as e:
         return JSONResponse(status_code=400, content={"success": False, "message": str(e)})
 
@@ -162,8 +219,30 @@ async def defer_question(q_id: str, user: dict = Depends(require_role("ta", "pro
             "deferred_at": datetime.now(timezone.utc).isoformat(),
         }
         res = supabase.table("questions").update(update_data).eq("id", q_id).execute()
+        updated = res.data[0]
+
         recalculate_queue(session_id)
-        return {"success": True, "data": res.data[0]}
+
+        # Broadcast: question deferred / queue updated
+        broadcast_session_event(
+            session_id=session_id,
+            event="question:deferred",
+            payload={"question": updated},
+        )
+
+        # Notify student
+        student_id = updated.get("student_id")
+        if student_id:
+            broadcast_user_notification(
+                user_id=student_id,
+                payload={
+                    "type": "question_deferred",
+                    "question_id": updated.get("id"),
+                    "session_id": session_id,
+                },
+            )
+
+        return {"success": True, "data": updated}
     except Exception as e:
         return JSONResponse(status_code=400, content={"success": False, "message": str(e)})
 
@@ -183,7 +262,18 @@ async def withdraw_question(q_id: str, user: dict = Depends(require_role("studen
             "queue_position": -1
         }
         res = supabase.table("questions").update(update_data).eq("id", q_id).execute()
-        recalculate_queue(q_res.data["session_id"])
-        return {"success": True, "data": res.data[0]}
+        updated = res.data[0]
+
+        session_id = q_res.data["session_id"]
+        recalculate_queue(session_id)
+
+        # Broadcast: question withdrawn / queue updated
+        broadcast_session_event(
+            session_id=session_id,
+            event="question:withdrawn",
+            payload={"question": updated},
+        )
+
+        return {"success": True, "data": updated}
     except Exception as e:
         return JSONResponse(status_code=400, content={"success": False, "message": str(e)})

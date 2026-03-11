@@ -1,14 +1,15 @@
-'use client';
+"use client";
 
-import { useState, useEffect } from 'react';
-import { useAuth } from '@/context/AuthContext';
-import NavBar from '@/components/common/NavBar';
-import QuestionSubmissionForm from '@/components/questions/QuestionSubmissionForm';
-import { ArrowLeft, Play, Square, MessageSquare, CheckCircle, Clock, AlertCircle } from 'lucide-react';
-import Link from 'next/link';
-import { useParams, useRouter } from 'next/navigation';
+import { useState, useEffect } from "react";
+import { useAuth } from "@/context/AuthContext";
+import NavBar from "@/components/common/NavBar";
+import QuestionSubmissionForm from "@/components/questions/QuestionSubmissionForm";
+import { ArrowLeft, Play, Square, MessageSquare, CheckCircle, Clock, AlertCircle, ChevronDown } from "lucide-react";
+import Link from "next/link";
+import { useParams, useRouter } from "next/navigation";
+import { useRealtimeChannel } from "@/hooks/useRealtimeChannel";
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api/v1';
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api/v1";
 
 function StatusBadge({ status }: { status: string }) {
   const config: Record<string, { dot: string; bg: string; text: string; label: string }> = {
@@ -34,6 +35,7 @@ export default function SessionView() {
   const [sessionInfo, setSessionInfo] = useState<any>(null);
   const [questions, setQuestions] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [expandedQuestionId, setExpandedQuestionId] = useState<string | null>(null);
 
   const fetchSessionAndQuestions = async () => {
     if (!token || !sessionId) return;
@@ -68,6 +70,20 @@ export default function SessionView() {
     const interval = setInterval(fetchSessionAndQuestions, 10000);
     return () => clearInterval(interval);
   }, [token, sessionId]);
+
+  // Realtime: refresh questions and session when events arrive for this session
+  useRealtimeChannel(
+    sessionId ? `session:${sessionId}` : null,
+    {
+      onQuestionEvent: () => {
+        // For v1, simply refetch to keep client logic simple and consistent.
+        fetchSessionAndQuestions();
+      },
+      onSessionEvent: () => {
+        fetchSessionAndQuestions();
+      },
+    }
+  );
 
   const handleStatusChange = async (newStatus: string) => {
     try {
@@ -110,24 +126,24 @@ export default function SessionView() {
     );
   }
 
-  const isStaff = user?.role === 'professor' || user?.role === 'ta';
-  const sessionStatus = sessionInfo?.status || 'scheduled';
+  const isStaff = user?.role === "professor" || user?.role === "ta";
+  const sessionStatus = sessionInfo?.status || "scheduled";
 
   // Student view: include deferred in active question check
   const activeQuestion = questions.find((q) =>
-    ['queued', 'in_progress', 'deferred'].includes(q.status)
+    ["queued", "in_progress", "deferred"].includes(q.status)
   );
 
   // TA view: split into sections
   const allActive = questions
-    .filter((q) => ['queued', 'in_progress', 'deferred'].includes(q.status))
+    .filter((q) => ["queued", "in_progress", "deferred"].includes(q.status))
     .sort((a, b) => a.queue_position - b.queue_position);
-  const inProgressQueue = allActive.filter((q) => q.status === 'in_progress');
-  const waitingQueue = allActive.filter((q) => q.status === 'queued' || q.status === 'deferred');
+  const inProgressQueue = allActive.filter((q) => q.status === "in_progress");
+  const waitingQueue = allActive.filter((q) => q.status === "queued" || q.status === "deferred");
 
-  const queuedCount = questions.filter((q) => q.status === 'queued' || q.status === 'deferred').length;
-  const inProgressCount = questions.filter((q) => q.status === 'in_progress').length;
-  const resolvedCount = questions.filter((q) => q.status === 'resolved').length;
+  const queuedCount = questions.filter((q) => q.status === "queued" || q.status === "deferred").length;
+  const inProgressCount = questions.filter((q) => q.status === "in_progress").length;
+  const resolvedCount = questions.filter((q) => q.status === "resolved").length;
 
   return (
     <div className="min-h-screen bg-bg">
@@ -202,7 +218,7 @@ export default function SessionView() {
           </div>
         ) : (
           /* ───── TA / Professor View ───── */
-          <div>
+          <div className="max-w-[600px] mx-auto">
             {/* Stats Row */}
             <div className="grid grid-cols-3 gap-4 mb-6">
               <div className="bg-card border border-border rounded-card p-4 text-center">
@@ -237,124 +253,212 @@ export default function SessionView() {
                 {/* In Progress Section */}
                 {inProgressQueue.length > 0 && (
                   <>
-                    {inProgressQueue.map((q) => (
-                      <div
-                        key={q.id}
-                        className="bg-card border-2 border-amber rounded-card p-5 shadow-sm shadow-amber/5"
-                      >
-                        <div className="flex flex-col md:flex-row gap-4 items-start md:items-center">
-                          <div className="bg-surface text-text-primary px-4 py-3 rounded-input text-center min-w-[80px] border border-border/50 shrink-0">
-                            <div className="text-xs text-text-secondary mb-1">POS</div>
-                            <div className="text-2xl font-bold">{q.queue_position}</div>
-                          </div>
-
-                          <div className="grow">
-                            <div className="flex items-center gap-2 mb-1">
-                              <h3 className="font-semibold text-text-primary text-lg">{q.title}</h3>
-                              <span className="bg-amber/10 text-amber text-xs px-2 py-0.5 rounded border border-amber/20 flex items-center gap-1">
-                                <CheckCircle className="w-3 h-3" /> In Progress
-                              </span>
+                    {inProgressQueue.map((q) => {
+                      const isExpanded = expandedQuestionId === q.id;
+                      return (
+                        <div
+                          key={q.id}
+                          className="bg-card border-2 border-amber rounded-card p-5 shadow-sm shadow-amber/5"
+                        >
+                          <div className="flex flex-col md:flex-row gap-4 items-start md:items-center">
+                            <div className="bg-surface text-text-primary px-4 py-3 rounded-input text-center min-w-[80px] border border-border/50 shrink-0">
+                              <div className="text-xs text-text-secondary mb-1">POS</div>
+                              <div className="text-2xl font-bold">{q.queue_position}</div>
                             </div>
-                            <p className="text-text-secondary text-sm mb-2">
-                              {q.student?.name} &bull; <span className="text-text-muted">{q.category}</span>
-                              {q.claimer?.name && (
-                                <span className="ml-2 text-amber">Claimed by {q.claimer.name}</span>
-                              )}
-                            </p>
-                            <p className="text-sm text-text-primary line-clamp-2 bg-[#0D1117] p-2 rounded-md border border-border/50">
-                              {q.description}
-                            </p>
+
+                            <div className="grow">
+                              <div className="flex items-center gap-2 mb-1">
+                                <h3 className="font-semibold text-text-primary text-lg">{q.title}</h3>
+                                <span className="bg-amber/10 text-amber text-xs px-2 py-0.5 rounded border border-amber/20 flex items-center gap-1">
+                                  <CheckCircle className="w-3 h-3" /> In Progress
+                                </span>
+                              </div>
+                              <p className="text-text-secondary text-sm mb-2">
+                                {q.student?.name} &bull; <span className="text-text-muted">{q.category}</span>
+                                {q.claimer?.name && (
+                                  <span className="ml-2 text-amber">Claimed by {q.claimer.name}</span>
+                                )}
+                              </p>
+                              <p className="text-sm text-text-primary line-clamp-2 bg-[#0D1117] p-2 rounded-md border border-border/50">
+                                {q.description}
+                              </p>
+                            </div>
+
+                            <div className="flex flex-col gap-2 shrink-0 w-full md:w-36">
+                              <button
+                                onClick={() => handleAction('resolve', q.id)}
+                                className="w-full bg-green text-white hover:bg-green/90 px-3 py-2 rounded-input text-sm font-medium transition-colors"
+                              >
+                                Resolve
+                              </button>
+                              <button
+                                onClick={() => handleAction('defer', q.id)}
+                                className="w-full bg-surface border border-border hover:bg-surface/80 text-text-secondary px-3 py-2 rounded-input text-sm font-medium transition-colors"
+                              >
+                                Defer
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => setExpandedQuestionId(isExpanded ? null : q.id)}
+                                className="w-full bg-surface border border-border/70 hover:bg-surface/80 text-text-muted hover:text-text-primary px-3 py-2 rounded-input text-xs font-medium transition-colors inline-flex items-center justify-center gap-1"
+                              >
+                                <span>{isExpanded ? 'Hide details' : 'View details'}</span>
+                                <ChevronDown
+                                  className={`w-3 h-3 transition-transform ${isExpanded ? 'rotate-180' : ''}`}
+                                />
+                              </button>
+                            </div>
                           </div>
 
-                          <div className="flex flex-row md:flex-col gap-2 shrink-0 md:w-32">
-                            <button
-                              onClick={() => handleAction('resolve', q.id)}
-                              className="w-full bg-green text-white hover:bg-green/90 px-3 py-2 rounded-input text-sm font-medium transition-colors"
-                            >
-                              Resolve
-                            </button>
-                            <button
-                              onClick={() => handleAction('defer', q.id)}
-                              className="w-full bg-surface border border-border hover:bg-surface/80 text-text-secondary px-3 py-2 rounded-input text-sm font-medium transition-colors"
-                            >
-                              Defer
-                            </button>
-                          </div>
+                          {isExpanded && (
+                            <div className="mt-4 pt-4 border-t border-border space-y-3">
+                              <div>
+                                <h4 className="text-xs font-semibold text-text-secondary mb-1">Description</h4>
+                                <p className="text-sm text-text-primary whitespace-pre-wrap">{q.description}</p>
+                              </div>
+                              {q.code_snippet && (
+                                <div>
+                                  <h4 className="text-xs font-semibold text-text-secondary mb-1">Code Snippet</h4>
+                                  <pre className="bg-[#0D1117] border border-border rounded-input px-3 py-2 text-xs text-text-primary font-mono whitespace-pre-wrap overflow-x-auto">
+                                    {q.code_snippet}
+                                  </pre>
+                                </div>
+                              )}
+                              {q.error_message && (
+                                <div>
+                                  <h4 className="text-xs font-semibold text-text-secondary mb-1">Error Message</h4>
+                                  <pre className="bg-red/10 border border-red/30 rounded-input px-3 py-2 text-xs text-red font-mono whitespace-pre-wrap overflow-x-auto">
+                                    {q.error_message}
+                                  </pre>
+                                </div>
+                              )}
+                              {q.what_tried && (
+                                <div>
+                                  <h4 className="text-xs font-semibold text-text-secondary mb-1 italic">Tried</h4>
+                                  <p className="text-sm text-text-primary whitespace-pre-wrap">{q.what_tried}</p>
+                                </div>
+                              )}
+                            </div>
+                          )}
                         </div>
-                      </div>
-                    ))}
+                      );
+                    })}
                   </>
                 )}
 
                 {/* Queued / Deferred Section */}
-                {waitingQueue.map((q) => (
-                  <div
-                    key={q.id}
-                    className="bg-card border border-border rounded-card p-5 shadow-sm transition-all hover:border-text-muted hover:shadow-md"
-                  >
-                    <div className="flex flex-col md:flex-row gap-4 items-start md:items-center">
-                      <div className="bg-surface text-text-primary px-4 py-3 rounded-input text-center min-w-[80px] border border-border/50 shrink-0">
-                        <div className="text-xs text-text-secondary mb-1">POS</div>
-                        <div className="text-2xl font-bold">{q.queue_position}</div>
+                {waitingQueue.map((q) => {
+                  const isExpanded = expandedQuestionId === q.id;
+                  return (
+                    <div
+                      key={q.id}
+                      className="bg-card border border-border rounded-card p-5 shadow-sm transition-all hover:border-text-muted hover:shadow-md"
+                    >
+                      <div className="flex flex-col md:flex-row gap-4 items-start md:items-center">
+                        <div className="bg-surface text-text-primary px-4 py-3 rounded-input text-center min-w-[80px] border border-border/50 shrink-0">
+                          <div className="text-xs text-text-secondary mb-1">POS</div>
+                          <div className="text-2xl font-bold">{q.queue_position}</div>
+                        </div>
+
+                        <div className="grow">
+                          <div className="flex items-center gap-2 mb-1">
+                            <h3 className="font-semibold text-text-primary text-lg">{q.title}</h3>
+                            <span className="text-xs px-2 py-0.5 rounded bg-surface border border-border text-text-muted">
+                              {q.category}
+                            </span>
+                            <span
+                              className={`text-xs px-2 py-0.5 rounded border ${
+                                q.priority === 'high'
+                                  ? 'bg-red/10 text-red border-red/20'
+                                  : q.priority === 'medium'
+                                    ? 'bg-amber/10 text-amber border-amber/20'
+                                    : 'bg-accent/10 text-accent border-accent/20'
+                              }`}
+                            >
+                              {q.priority}
+                            </span>
+                            {q.status === 'deferred' && (
+                              <span className="text-xs px-2 py-0.5 rounded bg-purple/10 text-purple border border-purple/20 flex items-center gap-1">
+                                <AlertCircle className="w-3 h-3" /> Deferred
+                              </span>
+                            )}
+                          </div>
+                          <p className="text-text-secondary text-sm mb-2">
+                            {q.student?.name} &bull;{' '}
+                            <span className="text-text-muted">
+                              ~{q.queue_position * 5} min wait
+                            </span>
+                          </p>
+                          <p className="text-sm text-text-primary line-clamp-2 bg-[#0D1117] p-2 rounded-md border border-border/50">
+                            {q.description}
+                          </p>
+                        </div>
+
+                        <div className="flex flex-col gap-2 shrink-0 w-full md:w-36">
+                          <button
+                            onClick={() => handleAction('claim', q.id)}
+                            className="w-full bg-accent hover:bg-accent/90 text-white px-3 py-2 rounded-input text-sm font-medium transition-colors"
+                          >
+                            Claim
+                          </button>
+                          <button
+                            onClick={() => handleAction('resolve', q.id)}
+                            className="w-full bg-green text-white hover:bg-green/90 px-3 py-2 rounded-input text-sm font-medium transition-colors"
+                          >
+                            Resolve
+                          </button>
+                          <button
+                            onClick={() => handleAction('defer', q.id)}
+                            className="w-full bg-surface border border-border hover:bg-surface/80 text-text-secondary px-3 py-2 rounded-input text-sm font-medium transition-colors"
+                          >
+                            Defer
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setExpandedQuestionId(isExpanded ? null : q.id)}
+                            className="w-full bg-surface border border-border/70 hover:bg-surface/80 text-text-muted hover:text-text-primary px-3 py-2 rounded-input text-xs font-medium transition-colors inline-flex items-center justify-center gap-1"
+                          >
+                            <span>{isExpanded ? 'Hide details' : 'View details'}</span>
+                            <ChevronDown
+                              className={`w-3 h-3 transition-transform ${isExpanded ? 'rotate-180' : ''}`}
+                            />
+                          </button>
+                        </div>
                       </div>
 
-                      <div className="grow">
-                        <div className="flex items-center gap-2 mb-1">
-                          <h3 className="font-semibold text-text-primary text-lg">{q.title}</h3>
-                          <span className="text-xs px-2 py-0.5 rounded bg-surface border border-border text-text-muted">
-                            {q.category}
-                          </span>
-                          <span
-                            className={`text-xs px-2 py-0.5 rounded border ${
-                              q.priority === 'high'
-                                ? 'bg-red/10 text-red border-red/20'
-                                : q.priority === 'medium'
-                                  ? 'bg-amber/10 text-amber border-amber/20'
-                                  : 'bg-accent/10 text-accent border-accent/20'
-                            }`}
-                          >
-                            {q.priority}
-                          </span>
-                          {q.status === 'deferred' && (
-                            <span className="text-xs px-2 py-0.5 rounded bg-purple/10 text-purple border border-purple/20 flex items-center gap-1">
-                              <AlertCircle className="w-3 h-3" /> Deferred
-                            </span>
+                      {isExpanded && (
+                        <div className="mt-4 pt-4 border-t border-border space-y-3">
+                          <div>
+                            <h4 className="text-xs font-semibold text-text-secondary mb-1">Description</h4>
+                            <p className="text-sm text-text-primary whitespace-pre-wrap">{q.description}</p>
+                          </div>
+                          {q.code_snippet && (
+                            <div>
+                              <h4 className="text-xs font-semibold text-text-secondary mb-1">Code Snippet</h4>
+                              <pre className="bg-[#0D1117] border border-border rounded-input px-3 py-2 text-xs text-text-primary font-mono whitespace-pre-wrap overflow-x-auto">
+                                {q.code_snippet}
+                              </pre>
+                            </div>
+                          )}
+                          {q.error_message && (
+                            <div>
+                              <h4 className="text-xs font-semibold text-text-secondary mb-1">Error Message</h4>
+                              <pre className="bg-red/10 border border-red/30 rounded-input px-3 py-2 text-xs text-red font-mono whitespace-pre-wrap overflow-x-auto">
+                                {q.error_message}
+                              </pre>
+                            </div>
+                          )}
+                          {q.what_tried && (
+                            <div>
+                              <h4 className="text-xs font-semibold text-text-secondary mb-1 italic">Tried</h4>
+                              <p className="text-sm text-text-primary whitespace-pre-wrap">{q.what_tried}</p>
+                            </div>
                           )}
                         </div>
-                        <p className="text-text-secondary text-sm mb-2">
-                          {q.student?.name} &bull;{' '}
-                          <span className="text-text-muted">
-                            ~{q.queue_position * 5} min wait
-                          </span>
-                        </p>
-                        <p className="text-sm text-text-primary line-clamp-2 bg-[#0D1117] p-2 rounded-md border border-border/50">
-                          {q.description}
-                        </p>
-                      </div>
-
-                      <div className="flex flex-row md:flex-col gap-2 shrink-0 md:w-32">
-                        <button
-                          onClick={() => handleAction('claim', q.id)}
-                          className="w-full bg-accent hover:bg-accent/90 text-white px-3 py-2 rounded-input text-sm font-medium transition-colors"
-                        >
-                          Claim
-                        </button>
-                        <button
-                          onClick={() => handleAction('resolve', q.id)}
-                          className="w-full bg-green text-white hover:bg-green/90 px-3 py-2 rounded-input text-sm font-medium transition-colors"
-                        >
-                          Resolve
-                        </button>
-                        <button
-                          onClick={() => handleAction('defer', q.id)}
-                          className="w-full bg-surface border border-border hover:bg-surface/80 text-text-secondary px-3 py-2 rounded-input text-sm font-medium transition-colors"
-                        >
-                          Defer
-                        </button>
-                      </div>
+                      )}
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             )}
           </div>
