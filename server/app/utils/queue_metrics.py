@@ -79,3 +79,22 @@ def compute_estimated_wait_minutes(position: int, avg_resolve_time: float) -> in
         minutes = 1
     return min(minutes, 60)
 
+
+def sort_questions(questions: list[dict]) -> list[dict]:
+    """
+    Sort a list of question dicts based on queue rules.
+    - Deferred questions go to the end, sorted by deferred_at ASC.
+    - Active questions sort by priority (high=0, medium=1, low=2), then by created_at ASC.
+    """
+    priority_map = {"high": 0, "medium": 1, "low": 2}
+
+    non_deferred = [q for q in questions if q.get("status") != "deferred"]
+    deferred = [q for q in questions if q.get("status") == "deferred"]
+
+    non_deferred.sort(
+        key=lambda q: (priority_map.get(q.get("priority"), 2), q.get("created_at") or "")
+    )
+    deferred.sort(key=lambda q: q.get("deferred_at") or q.get("created_at") or "")
+
+    return non_deferred + deferred
+

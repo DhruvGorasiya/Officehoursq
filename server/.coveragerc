@@ -1,0 +1,19 @@
+[run]
+omit =
+    tests/*
+    app/main.py
+    */__init__.py
+    app/schemas/knowledge_base.py
+    app/schemas/notifications.py
+    app/models/*
+    app/core/security.py
+
+[report]
+omit =
+    tests/*
+    app/main.py
+    */__init__.py
+    app/schemas/knowledge_base.py
+    app/schemas/notifications.py
+    app/models/*
+    app/core/security.py

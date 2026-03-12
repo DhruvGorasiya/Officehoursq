@@ -14,6 +14,7 @@ from app.utils.realtime_broadcast import (
 from app.utils.queue_metrics import (
     compute_estimated_wait_minutes,
     get_session_avg_resolve_time_minutes,
+    sort_questions,
 )
 
 router = APIRouter()
@@ -45,15 +46,7 @@ def recalculate_queue(session_id: str):
     if not rows:
         return
 
-    non_deferred = [q for q in rows if q["status"] != "deferred"]
-    deferred = [q for q in rows if q["status"] == "deferred"]
-
-    non_deferred.sort(
-        key=lambda q: (priority_map.get(q.get("priority"), 2), q.get("created_at") or "")
-    )
-    deferred.sort(key=lambda q: q.get("deferred_at") or q.get("created_at") or "")
-
-    ordered = non_deferred + deferred
+    ordered = sort_questions(rows)
 
     avg_resolve_time = get_session_avg_resolve_time_minutes(session_id)
 

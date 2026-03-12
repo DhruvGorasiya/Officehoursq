@@ -18,8 +18,11 @@ Notes on design decisions:
 """
 
 import uuid
+from unittest.mock import patch
 import pytest
 from httpx import AsyncClient
+
+from app.core.database import supabase
 
 # ---------------------------------------------------------------------------
 # Constants
@@ -159,6 +162,18 @@ class TestRegister:
         assert second.status_code == 400
         assert second.json()["success"] is False
 
+    @patch.object(supabase, "table")
+    async def test_register_db_exception(self, mock_table, client: AsyncClient):
+        """Auth succeeds but public.users insert fails -> 400."""
+        # Mock insert().execute()
+        mock_table.return_value.insert.return_value.execute.side_effect = Exception("DB Insert Error")
+        
+        payload = _reg_payload("student")
+        res = await _register(client, payload)
+        
+        assert res.status_code == 400
+        assert "profile creation failed" in res.json()["message"]
+
 
 # ===========================================================================
 # POST /login
@@ -202,6 +217,21 @@ class TestLogin:
         res = await _login(client, f"nobody_{uuid.uuid4().hex[:6]}@{EMAIL_DOMAIN}", "TestPass123!")
         assert res.status_code == 401
         assert res.json()["success"] is False
+
+    @patch.object(supabase, "table")
+    async def test_login_fallback_metadata(self, mock_table, client: AsyncClient):
+        """User exists in Auth but not in public.users → falls back to metadata."""
+        # Mock select().eq().single().execute() to raise exception
+        mock_table.return_value.select.return_value.eq.return_value.single.return_value.execute.side_effect = Exception("DB Error")
+        
+        payload = _reg_payload("student")
+        reg = await _register(client, payload)
+        assert reg.status_code == 200
+        
+        res = await _login(client, payload["email"], payload["password"])
+        assert res.status_code == 200
+        assert res.json()["data"]["name"] == payload["name"]
+        assert res.json()["data"]["role"] == "student"
 
 
 # ===========================================================================
@@ -256,3 +286,33 @@ class TestMe:
         assert res.status_code == 401
         body = res.json()
         assert "detail" in body
+
+    @patch.object(supabase, "table")
+    async def test_me_user_not_found(self, mock_table, client: AsyncClient):
+        """Valid token but user missing from public.users -> 404."""
+        import unittest.mock
+        mock_response = unittest.mock.MagicMock()
+        mock_response.data = None
+        mock_table.return_value.select.return_value.eq.return_value.single.return_value.execute.return_value = mock_response
+        
+        payload = _reg_payload("ta")
+        reg = await _register(client, payload)
+        assert reg.status_code == 200
+        token = reg.json()["data"]["token"]
+        
+        res = await client.get(f"{BASE}/me", headers={"Authorization": f"Bearer {token}"})
+        assert res.status_code == 404
+        assert res.json()["success"] is False
+        assert "not found" in res.json()["message"].lower()
+
+    @patch.object(supabase, "table")
+    async def test_me_user_db_exception(self, mock_table, client: AsyncClient):
+        """Valid token but DB throws exception -> 400."""
+        mock_table.return_value.select.return_value.eq.return_value.single.return_value.execute.side_effect = Exception("DB Error")
+        
+        payload = _reg_payload("student")
+        reg = await _register(client, payload)
+        token = reg.json()["data"]["token"]
+        
+        res = await client.get(f"{BASE}/me", headers={"Authorization": f"Bearer {token}"})
+        assert res.status_code == 400

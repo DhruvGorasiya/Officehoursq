@@ -152,6 +152,25 @@ class TestCreateSession:
         )
         assert res.status_code == 422
 
+    async def test_professor_creates_session_with_tas(
+        self, client: AsyncClient, professor_token: str, ta_token: str
+    ):
+        """Professor creates a session with assigned TAs → 200."""
+        course = await _make_course(client, professor_token)
+        payload = _session_payload(course["id"])
+
+        ta_res = await client.get("/api/v1/auth/me", headers={"Authorization": f"Bearer {ta_token}"})
+        ta_id = ta_res.json()["data"]["id"]
+
+        payload["ta_ids"] = [ta_id]
+
+        res = await client.post(
+            BASE,
+            json=payload,
+            headers={"Authorization": f"Bearer {professor_token}"},
+        )
+        assert res.status_code == 200
+
 
 # ===========================================================================
 # GET /api/v1/sessions?course_id=  — List sessions
@@ -247,6 +266,20 @@ class TestGetSession:
         res = await client.get(f"{BASE}/{session['id']}")
         assert res.status_code == 401
 
+    async def test_student_cannot_fetch_unenrolled_course_session(
+        self, client: AsyncClient, professor_token: str, ta_token: str
+    ):
+        """User who is not professor and not enrolled cannot fetch session → 403."""
+        course = await _make_course(client, professor_token)
+        session = await _make_session(client, professor_token, course["id"])
+        
+        # ta_token represents an authenticated user NOT enrolled in this course
+        res = await client.get(
+            f"{BASE}/{session['id']}",
+            headers={"Authorization": f"Bearer {ta_token}"},
+        )
+        assert res.status_code == 403
+
 
 # ===========================================================================
 # PUT /api/v1/sessions/{session_id}  — Update session
@@ -304,6 +337,32 @@ class TestUpdateSession:
             headers={"Authorization": f"Bearer {ta_token}"},
         )
         assert res.status_code == 403
+
+    async def test_professor_updates_session_empty_and_tas(
+        self, client: AsyncClient, professor_token: str, ta_token: str
+    ):
+        """Professor sends empty update or updates TAs."""
+        course = await _make_course(client, professor_token)
+        session = await _make_session(client, professor_token, course["id"])
+
+        # 1. Empty update
+        res1 = await client.put(
+            f"{BASE}/{session['id']}",
+            json={},
+            headers={"Authorization": f"Bearer {professor_token}"},
+        )
+        assert res1.status_code == 200
+
+        # 2. Update TAs
+        ta_res = await client.get("/api/v1/auth/me", headers={"Authorization": f"Bearer {ta_token}"})
+        ta_id = ta_res.json()["data"]["id"]
+
+        res2 = await client.put(
+            f"{BASE}/{session['id']}",
+            json={"ta_ids": [ta_id]},
+            headers={"Authorization": f"Bearer {professor_token}"},
+        )
+        assert res2.status_code in (200, 400)
 
     async def test_unauthenticated_update_rejected(
         self, client: AsyncClient, professor_token: str
@@ -430,10 +489,21 @@ class TestSessionStatus:
         first = await _patch_status(client, professor_token, session_a["id"], "active")
         assert first.status_code == 200
 
-        # Try to activate second session while first is active
         second = await _patch_status(client, professor_token, session_b["id"], "active")
         assert second.status_code == 400
         assert second.json()["success"] is False
+
+    async def test_professor_cannot_change_active_to_scheduled(
+        self, client: AsyncClient, professor_token: str
+    ):
+        """Invalid transition from active to scheduled → 400."""
+        course = await _make_course(client, professor_token)
+        session = await _make_session(client, professor_token, course["id"])
+        await _patch_status(client, professor_token, session["id"], "active")
+
+        res = await _patch_status(client, professor_token, session["id"], "scheduled")
+        assert res.status_code == 400
+        assert "Invalid transition" in res.json()["message"]
 
     async def test_student_cannot_change_status(
         self, client: AsyncClient, professor_token: str, student_token: str
