@@ -5,32 +5,78 @@ from datetime import datetime, timezone
 from app.schemas.questions import QuestionCreate, QuestionUpdate, QuestionResolve
 from app.core.database import supabase
 from app.core.deps import get_current_user, require_role
-from app.utils.realtime_broadcast import broadcast_session_event, broadcast_user_notification
+from app.utils.realtime_broadcast import (
+    broadcast_session_event,
+    broadcast_user_notification,
+)
+from app.utils.queue_metrics import (
+    compute_estimated_wait_minutes,
+    get_session_avg_resolve_time_minutes,
+)
 
 router = APIRouter()
 
+
 def recalculate_queue(session_id: str):
     """Re-sort and renumber all active queue positions for a session.
-    Sort: priority (high>medium>low), then created_at ASC.
-    Deferred questions always go to the absolute back, sorted by deferred_at ASC.
+
+    Sort order (per PRD):
+    - Priority (high=0, medium=1, low=2)
+    - Then submitted_at ASC within same priority (questions.created_at)
+    - Deferred questions always go to the absolute back, sorted by deferred_at ASC.
+
+    Also computes estimated_wait_minutes for each active question based on:
+    - avg_resolve_time_minutes for the session (default 5.0 if no history)
+    - estimated_wait_minutes = min(round(position * avg_resolve_time), 60)
     """
     priority_map = {"high": 0, "medium": 1, "low": 2}
 
-    active = supabase.table("questions") \
-        .select("id, priority, created_at, status, deferred_at") \
-        .eq("session_id", session_id) \
-        .in_("status", ["queued", "in_progress", "deferred"]) \
+    active = (
+        supabase.table("questions")
+        .select("id, priority, created_at, status, deferred_at")
+        .eq("session_id", session_id)
+        .in_("status", ["queued", "in_progress", "deferred"])
         .execute()
+    )
 
-    non_deferred = [q for q in active.data if q["status"] != "deferred"]
-    deferred = [q for q in active.data if q["status"] == "deferred"]
+    rows = active.data or []
+    if not rows:
+        return
 
-    non_deferred.sort(key=lambda q: (priority_map.get(q["priority"], 2), q["created_at"]))
-    deferred.sort(key=lambda q: q["deferred_at"] or q["created_at"])
+    non_deferred = [q for q in rows if q["status"] != "deferred"]
+    deferred = [q for q in rows if q["status"] == "deferred"]
+
+    non_deferred.sort(
+        key=lambda q: (priority_map.get(q.get("priority"), 2), q.get("created_at") or "")
+    )
+    deferred.sort(key=lambda q: q.get("deferred_at") or q.get("created_at") or "")
 
     ordered = non_deferred + deferred
+
+    avg_resolve_time = get_session_avg_resolve_time_minutes(session_id)
+
     for i, q in enumerate(ordered):
-        supabase.table("questions").update({"queue_position": i + 1}).eq("id", q["id"]).execute()
+        position = i + 1
+        est_minutes = compute_estimated_wait_minutes(position, avg_resolve_time)
+        supabase.table("questions").update(
+            {"queue_position": position, "estimated_wait_minutes": est_minutes}
+        ).eq("id", q["id"]).execute()
+
+    # After updating positions and estimated waits, broadcast a consolidated queue update.
+    refreshed = (
+        supabase.table("questions")
+        .select("*")
+        .eq("session_id", session_id)
+        .in_("status", ["queued", "in_progress", "deferred"])
+        .order("queue_position")
+        .execute()
+    )
+
+    broadcast_session_event(
+        session_id=session_id,
+        event="queue:updated",
+        payload={"questions": refreshed.data or []},
+    )
 
 @router.post("")
 async def create_question(req: QuestionCreate, user: dict = Depends(require_role("student"))):
@@ -48,18 +94,16 @@ async def create_question(req: QuestionCreate, user: dict = Depends(require_role
         if existing.data:
             return JSONResponse(status_code=400, content={"success": False, "message": "You already have an active question in this session"})
             
-        # Calculate queue position (include deferred since they occupy queue slots)
-        current_queue = supabase.table("questions").select("id").eq("session_id", session_id).in_("status", ["queued", "in_progress", "deferred"]).execute()
-        queue_pos = len(current_queue.data) + 1
-        
         q_data = req.model_dump()
         q_data["student_id"] = student_id
         q_data["course_id"] = session_res.data["course_id"]
         q_data["status"] = "queued"
-        q_data["queue_position"] = queue_pos
         
         res = supabase.table("questions").insert(q_data).execute()
         created = res.data[0]
+
+        # Recalculate queue for this session so positions and estimated waits are consistent.
+        recalculate_queue(session_id)
 
         # Broadcast: new question in session queue
         broadcast_session_event(
@@ -125,7 +169,7 @@ async def update_question(q_id: str, req: QuestionUpdate, user: dict = Depends(r
 @router.patch("/{q_id}/claim")
 async def claim_question(q_id: str, user: dict = Depends(require_role("ta", "professor"))):
     try:
-        q_res = supabase.table("questions").select("status").eq("id", q_id).single().execute()
+        q_res = supabase.table("questions").select("status, session_id").eq("id", q_id).single().execute()
         if not q_res.data or q_res.data["status"] not in ["queued", "deferred"]:
             return JSONResponse(status_code=400, content={"success": False, "message": "Question is not queued"})
             
@@ -137,8 +181,12 @@ async def claim_question(q_id: str, user: dict = Depends(require_role("ta", "pro
         res = supabase.table("questions").update(update_data).eq("id", q_id).execute()
         updated = res.data[0]
 
-        # Broadcast: question claimed / queue updated
-        session_id = updated.get("session_id")
+        # Recalculate queue positions and estimated waits
+        session_id = q_res.data.get("session_id")
+        if session_id:
+            recalculate_queue(session_id)
+
+        # Broadcast: question claimed
         if session_id:
             broadcast_session_event(
                 session_id=session_id,

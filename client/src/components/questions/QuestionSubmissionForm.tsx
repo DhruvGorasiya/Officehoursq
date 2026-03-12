@@ -211,8 +211,17 @@ export default function QuestionSubmissionForm({
               {activeQuestion.queue_position}
             </p>
             <p className="text-xs text-text-muted mt-2">
-              Estimated wait: ~{Math.min(activeQuestion.queue_position * 5, 60)}
-              {activeQuestion.queue_position * 5 > 60 ? "+" : ""} mins
+              {(() => {
+                const base =
+                  activeQuestion.estimated_wait_minutes ??
+                  (activeQuestion.queue_position
+                    ? activeQuestion.queue_position * 5
+                    : 5);
+                const waitMinutes = Math.min(base, 60);
+                const label =
+                  base > 60 ? "60+ min" : `${waitMinutes} min`;
+                return `Estimated wait: ~${label}`;
+              })()}
             </p>
           </div>
         )}

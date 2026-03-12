@@ -11,6 +11,7 @@ interface RealtimeHandlers {
   onQuestionEvent?: QuestionEventHandler;
   onSessionEvent?: SessionEventHandler;
   onNotificationEvent?: NotificationEventHandler;
+  onQueueUpdatedEvent?: QuestionEventHandler;
 }
 
 export function useRealtimeChannel(channelName: string | null, handlers: RealtimeHandlers) {
@@ -44,6 +45,15 @@ export function useRealtimeChannel(channelName: string | null, handlers: Realtim
         "broadcast",
         { event: "question:withdrawn" },
         (payload) => handlers.onQuestionEvent?.(payload.payload)
+      );
+
+      channel.on(
+        "broadcast",
+        { event: "queue:updated" },
+        (payload) =>
+          handlers.onQueueUpdatedEvent
+            ? handlers.onQueueUpdatedEvent(payload.payload)
+            : handlers.onQuestionEvent?.(payload.payload)
       );
     }
 

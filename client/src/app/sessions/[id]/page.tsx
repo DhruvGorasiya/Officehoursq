@@ -82,6 +82,9 @@ export default function SessionView() {
       onSessionEvent: () => {
         fetchSessionAndQuestions();
       },
+      onQueueUpdatedEvent: () => {
+        fetchSessionAndQuestions();
+      },
     }
   );
 
@@ -395,9 +398,20 @@ export default function SessionView() {
                             )}
                           </div>
                           <p className="text-text-secondary text-sm mb-2">
-                            {q.student?.name} &bull;{' '}
+                            {q.student?.name} &bull;{" "}
                             <span className="text-text-muted">
-                              ~{q.queue_position * 5} min wait
+                              {(() => {
+                                const waitMinutes =
+                                  q.estimated_wait_minutes ??
+                                  (q.queue_position
+                                    ? q.queue_position * 5
+                                    : 5);
+                                const label =
+                                  waitMinutes >= 60
+                                    ? "60+ min"
+                                    : `${waitMinutes} min`;
+                                return `~${label} wait`;
+                              })()}
                             </span>
                           </p>
                           <p className="text-sm text-text-primary line-clamp-2 bg-[#0D1117] p-2 rounded-md border border-border/50">

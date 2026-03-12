@@ -37,6 +37,7 @@ class QuestionResponse(BaseModel):
     priority: str
     status: str
     queue_position: int
+    estimated_wait_minutes: Optional[int] = None
     claimed_by: Optional[str] = None
     resolution_note: Optional[str] = None
     claimed_at: Optional[datetime] = None
