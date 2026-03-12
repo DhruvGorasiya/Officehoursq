@@ -34,12 +34,18 @@ async def create_session(
 ):
     try:
         # Check course ownership
-        course_res = supabase.table("courses").select("professor_id").eq("id", req.course_id).single().execute()
+        course_res = (
+            supabase.table("courses")
+            .select("professor_id")
+            .eq("id", str(req.course_id))
+            .single()
+            .execute()
+        )
         if not course_res.data or course_res.data["professor_id"] != user["sub"]:
             return JSONResponse(status_code=403, content={"success": False, "message": "Not authorized to create sessions for this course"})
         
         session_data = {
-            "course_id": req.course_id,
+            "course_id": str(req.course_id),
             "title": req.title,
             "date": req.date.isoformat(),
             "start_time": req.start_time.isoformat(),
@@ -51,7 +57,10 @@ async def create_session(
         
         # Insert TAs if assigned
         if req.ta_ids:
-            ta_data = [{"session_id": session_id, "ta_id": ta_id} for ta_id in req.ta_ids]
+            ta_data = [
+                {"session_id": session_id, "ta_id": str(ta_id)}
+                for ta_id in req.ta_ids
+            ]
             supabase.table("session_ta_assignments").insert(ta_data).execute()
             
         return {"success": True, "data": res.data[0]}
