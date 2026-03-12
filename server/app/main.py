@@ -23,6 +23,13 @@ app = FastAPI(
     version="1.0.0",
     contact={"name": "OfficeHoursQ Team"},
     license_info={"name": "MIT"},
+    servers=[
+        {
+            "url": "https://officehoursq.onrender.com",
+            "description": "Production",
+        },
+        {"url": "http://localhost:8000", "description": "Local Development"},
+    ],
     openapi_tags=[
         {
             "name": "Auth",
@@ -85,6 +92,7 @@ app.include_router(
     prefix=f"{settings.API_V1_PREFIX}/analytics",
     tags=["analytics"],
 )
+
 
 @app.get("/")
 async def root():
