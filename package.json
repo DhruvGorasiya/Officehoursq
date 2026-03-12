@@ -1,0 +1,7 @@
+{
+  "name": "officehoursq",
+  "version": "1.0.0",
+  "scripts": {
+    "test:e2e": "cd e2e && npx playwright test --workers=1"
+  }
+}
