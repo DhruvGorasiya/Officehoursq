@@ -60,9 +60,16 @@ def recalculate_queue(session_id: str):
     for i, q in enumerate(ordered):
         position = i + 1
         est_minutes = compute_estimated_wait_minutes(position, avg_resolve_time)
-        supabase.table("questions").update(
-            {"queue_position": position, "estimated_wait_minutes": est_minutes}
-        ).eq("id", q["id"]).execute()
+        try:
+            supabase.table("questions").update(
+                {"queue_position": position, "estimated_wait_minutes": est_minutes}
+            ).eq("id", q["id"]).execute()
+        except Exception:
+            # Fall back to updating only queue_position if estimated_wait_minutes
+            # column is missing from the schema cache (migration not yet applied).
+            supabase.table("questions").update(
+                {"queue_position": position}
+            ).eq("id", q["id"]).execute()
 
     # After updating positions and estimated waits, broadcast a consolidated queue update.
     refreshed = (
