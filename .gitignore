@@ -48,3 +48,4 @@ coverage/
 *.pid
 .ruff_cache/
 .mypy_cache/
+e2e/.env

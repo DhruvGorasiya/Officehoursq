@@ -272,6 +272,7 @@ export default function SessionView() {
                       return (
                         <div
                           key={q.id}
+                          data-testid="question-card"
                           className="bg-card border-2 border-amber rounded-card p-5 shadow-sm shadow-amber/5"
                         >
                           <div className="flex flex-col md:flex-row gap-4 items-start md:items-center">
@@ -366,6 +367,7 @@ export default function SessionView() {
                   return (
                     <div
                       key={q.id}
+                      data-testid="question-card"
                       className="bg-card border border-border rounded-card p-5 shadow-sm transition-all hover:border-text-muted hover:shadow-md"
                     >
                       <div className="flex flex-col md:flex-row gap-4 items-start md:items-center">

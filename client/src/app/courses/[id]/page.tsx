@@ -198,13 +198,12 @@ export default function CourseDetail() {
                       {session.title}
                     </h3>
                     <span
-                      className={`text-xs px-2 py-1 rounded-full font-medium ${
-                        session.status === "active"
+                      className={`text-xs px-2 py-1 rounded-full font-medium ${session.status === "active"
                           ? "bg-green/10 text-green"
                           : session.status === "scheduled"
-                          ? "bg-blue-500/10 text-blue-400"
-                          : "bg-surface text-text-muted"
-                      }`}
+                            ? "bg-blue-500/10 text-blue-400"
+                            : "bg-surface text-text-muted"
+                        }`}
                     >
                       {session.status.toUpperCase()}
                     </span>
@@ -240,6 +239,7 @@ export default function CourseDetail() {
                   Session Title
                 </label>
                 <input
+                  id="sessionTitle"
                   type="text"
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
@@ -253,6 +253,7 @@ export default function CourseDetail() {
                   Date
                 </label>
                 <input
+                  id="sessionDate"
                   type="date"
                   value={date}
                   onChange={(e) => setDate(e.target.value)}
@@ -266,6 +267,7 @@ export default function CourseDetail() {
                     Start Time
                   </label>
                   <input
+                    id="startTime"
                     type="time"
                     value={startTime}
                     onChange={(e) => setStartTime(e.target.value)}
@@ -278,6 +280,7 @@ export default function CourseDetail() {
                     End Time
                   </label>
                   <input
+                    id="endTime"
                     type="time"
                     value={endTime}
                     onChange={(e) => setEndTime(e.target.value)}
