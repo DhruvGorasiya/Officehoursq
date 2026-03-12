@@ -313,10 +313,11 @@ export default function QuestionSubmissionForm({
 
       <form onSubmit={handleSubmit} className="space-y-4">
         <div>
-          <label className="block text-sm font-medium text-text-secondary mb-1">
+          <label htmlFor="title" className="block text-sm font-medium text-text-secondary mb-1">
             Title <span className="text-red">*</span>
           </label>
           <input
+            id="title"
             type="text"
             value={title}
             onChange={(e) => setTitle(e.target.value)}
@@ -331,10 +332,11 @@ export default function QuestionSubmissionForm({
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-text-secondary mb-1">
+          <label htmlFor="description" className="block text-sm font-medium text-text-secondary mb-1">
             Description <span className="text-red">*</span>
           </label>
           <textarea
+            id="description"
             value={description}
             onChange={(e) => setDescription(e.target.value)}
             maxLength={2000}
@@ -349,10 +351,11 @@ export default function QuestionSubmissionForm({
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-text-secondary mb-1">
+          <label htmlFor="whatTried" className="block text-sm font-medium text-text-secondary mb-1">
             What I&apos;ve Tried <span className="text-red">*</span>
           </label>
           <textarea
+            id="whatTried"
             value={whatTried}
             onChange={(e) => setWhatTried(e.target.value)}
             maxLength={2000}
@@ -367,10 +370,11 @@ export default function QuestionSubmissionForm({
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-text-secondary mb-1">
+          <label htmlFor="codeSnippet" className="block text-sm font-medium text-text-secondary mb-1">
             Code Snippet (Optional)
           </label>
           <textarea
+            id="codeSnippet"
             value={codeSnippet}
             onChange={(e) => setCodeSnippet(e.target.value)}
             maxLength={5000}
@@ -381,10 +385,11 @@ export default function QuestionSubmissionForm({
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-text-secondary mb-1">
+          <label htmlFor="errorMessage" className="block text-sm font-medium text-text-secondary mb-1">
             Error Message (Optional)
           </label>
           <input
+            id="errorMessage"
             type="text"
             value={errorMessage}
             onChange={(e) => setErrorMessage(e.target.value)}
@@ -396,10 +401,11 @@ export default function QuestionSubmissionForm({
 
         <div className="grid grid-cols-2 gap-4">
           <div>
-            <label className="block text-sm font-medium text-text-secondary mb-1">
+            <label htmlFor="category" className="block text-sm font-medium text-text-secondary mb-1">
               Category
             </label>
             <select
+              id="category"
               value={category}
               onChange={(e) => setCategory(e.target.value)}
               className="w-full bg-surface border border-border rounded-input px-4 py-2.5 text-text-primary focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent appearance-none"
@@ -412,10 +418,11 @@ export default function QuestionSubmissionForm({
             </select>
           </div>
           <div>
-            <label className="block text-sm font-medium text-text-secondary mb-1">
+            <label htmlFor="priority" className="block text-sm font-medium text-text-secondary mb-1">
               Priority
             </label>
             <select
+              id="priority"
               value={priority}
               onChange={(e) => setPriority(e.target.value)}
               className="w-full bg-surface border border-border rounded-input px-4 py-2.5 text-text-primary focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent appearance-none"
