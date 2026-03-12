@@ -13,7 +13,10 @@ class Settings(BaseSettings):
     JWT_ALGORITHM: str = "HS256"
     JWT_EXPIRATION_MINUTES: int = 10080  # 7 days
 
-    CORS_ORIGINS: list[str] = ["http://localhost:3000"]
+    CORS_ORIGINS: list[str] = [
+        "http://localhost:3000",
+        "https://officehoursq-theta.vercel.app/",
+    ]
 
     model_config = {"env_file": ".env", "extra": "ignore"}
 

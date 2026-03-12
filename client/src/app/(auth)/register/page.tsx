@@ -1,38 +1,38 @@
-'use client';
+"use client";
 
-import { useState } from 'react';
-import Link from 'next/link';
-import { useRouter } from 'next/navigation';
-import { useAuth } from '@/context/AuthContext';
+import { useState } from "react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { useAuth } from "@/context/AuthContext";
 
 export default function RegisterPage() {
-  const [name, setName] = useState('');
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [role, setRole] = useState<'student' | 'ta' | 'professor'>('student');
-  const [error, setError] = useState('');
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [role, setRole] = useState<"student" | "ta" | "professor">("student");
+  const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-  
+
   const router = useRouter();
   const { login } = useAuth();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError('');
-    
+    setError("");
+
     if (password.length < 8) {
-      setError('Password must be at least 8 characters long');
+      setError("Password must be at least 8 characters long");
       return;
     }
-    
+
     setIsLoading(true);
 
     try {
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api/v1';
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL;
       const response = await fetch(`${apiUrl}/auth/register`, {
-        method: 'POST',
+        method: "POST",
         headers: {
-          'Content-Type': 'application/json',
+          "Content-Type": "application/json",
         },
         body: JSON.stringify({ name, email, password, role }),
       });
@@ -47,12 +47,12 @@ export default function RegisterPage() {
           name: data.data.name,
           role: data.data.role,
         });
-        router.push('/dashboard');
+        router.push("/dashboard");
       } else {
-        setError(data.message || 'Registration failed');
+        setError(data.message || "Registration failed");
       }
     } catch (err: any) {
-      setError('A network error occurred. Please try again later.');
+      setError("A network error occurred. Please try again later.");
     } finally {
       setIsLoading(false);
     }
@@ -61,8 +61,12 @@ export default function RegisterPage() {
   return (
     <div className="flex min-h-screen flex-col items-center justify-center bg-bg p-6">
       <div className="w-full max-w-md rounded-card bg-card p-8 shadow-xl border border-border">
-        <h1 className="mb-2 text-2xl font-bold text-text-primary text-center">Create an Account</h1>
-        <p className="mb-8 text-center text-sm text-text-secondary">Join OfficeHoursQ to manage your queue</p>
+        <h1 className="mb-2 text-2xl font-bold text-text-primary text-center">
+          Create an Account
+        </h1>
+        <p className="mb-8 text-center text-sm text-text-secondary">
+          Join OfficeHoursQ to manage your queue
+        </p>
 
         {error && (
           <div className="mb-6 rounded-badge bg-red/10 px-4 py-3 text-sm text-red">
@@ -72,7 +76,10 @@ export default function RegisterPage() {
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label className="mb-1 block text-sm font-medium text-text-secondary" htmlFor="name">
+            <label
+              className="mb-1 block text-sm font-medium text-text-secondary"
+              htmlFor="name"
+            >
               Full Name
             </label>
             <input
@@ -87,7 +94,10 @@ export default function RegisterPage() {
           </div>
 
           <div>
-            <label className="mb-1 block text-sm font-medium text-text-secondary" htmlFor="email">
+            <label
+              className="mb-1 block text-sm font-medium text-text-secondary"
+              htmlFor="email"
+            >
               University Email
             </label>
             <input
@@ -102,7 +112,10 @@ export default function RegisterPage() {
           </div>
 
           <div>
-            <label className="mb-1 block text-sm font-medium text-text-secondary" htmlFor="password">
+            <label
+              className="mb-1 block text-sm font-medium text-text-secondary"
+              htmlFor="password"
+            >
               Password
             </label>
             <input
@@ -117,13 +130,18 @@ export default function RegisterPage() {
           </div>
 
           <div>
-            <label className="mb-1 block text-sm font-medium text-text-secondary" htmlFor="role">
+            <label
+              className="mb-1 block text-sm font-medium text-text-secondary"
+              htmlFor="role"
+            >
               I am a...
             </label>
             <select
               id="role"
               value={role}
-              onChange={(e) => setRole(e.target.value as 'student' | 'ta' | 'professor')}
+              onChange={(e) =>
+                setRole(e.target.value as "student" | "ta" | "professor")
+              }
               className="w-full rounded-input border border-border bg-surface px-4 py-2 text-text-primary focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent"
             >
               <option value="student">Student</option>
@@ -137,13 +155,16 @@ export default function RegisterPage() {
             disabled={isLoading}
             className="mt-6 w-full rounded-input bg-accent px-4 py-2.5 font-medium text-white transition-colors hover:bg-accent/90 disabled:opacity-50"
           >
-            {isLoading ? 'Creating Account...' : 'Register'}
+            {isLoading ? "Creating Account..." : "Register"}
           </button>
         </form>
 
         <p className="mt-6 text-center text-sm text-text-secondary">
-          Already have an account?{' '}
-          <Link href="/login" className="font-medium text-accent hover:underline">
+          Already have an account?{" "}
+          <Link
+            href="/login"
+            className="font-medium text-accent hover:underline"
+          >
             Sign in here
           </Link>
         </p>

@@ -1,11 +1,11 @@
-'use client';
+"use client";
 
-import { useState, useEffect } from 'react';
-import { useAuth } from '@/context/AuthContext';
-import NavBar from '@/components/common/NavBar';
-import { Plus, ArrowLeft } from 'lucide-react';
-import Link from 'next/link';
-import { useParams, useRouter } from 'next/navigation';
+import { useState, useEffect } from "react";
+import { useAuth } from "@/context/AuthContext";
+import NavBar from "@/components/common/NavBar";
+import { Plus, ArrowLeft } from "lucide-react";
+import Link from "next/link";
+import { useParams, useRouter } from "next/navigation";
 
 interface Session {
   id: string;
@@ -14,7 +14,7 @@ interface Session {
   date: string;
   start_time: string;
   end_time: string;
-  status: 'scheduled' | 'active' | 'ended';
+  status: "scheduled" | "active" | "ended";
 }
 
 interface Course {
@@ -35,41 +35,41 @@ export default function CourseDetail() {
   const [isLoading, setIsLoading] = useState(true);
 
   const [showCreateModal, setShowCreateModal] = useState(false);
-  const [title, setTitle] = useState('');
-  const [date, setDate] = useState('');
-  const [startTime, setStartTime] = useState('');
-  const [endTime, setEndTime] = useState('');
-  const [error, setError] = useState('');
+  const [title, setTitle] = useState("");
+  const [date, setDate] = useState("");
+  const [startTime, setStartTime] = useState("");
+  const [endTime, setEndTime] = useState("");
+  const [error, setError] = useState("");
 
   useEffect(() => {
     if (!token || !courseId) return;
 
     const fetchCourseAndSessions = async () => {
       try {
-        const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api/v1';
+        const apiUrl = process.env.NEXT_PUBLIC_API_URL;
 
         // Fetch course details
         const cRes = await fetch(`${apiUrl}/courses/${courseId}`, {
-          headers: { Authorization: `Bearer ${token}` }
+          headers: { Authorization: `Bearer ${token}` },
         });
         const cData = await cRes.json();
         if (cData.success) {
           setCourse(cData.data);
         } else {
-          router.push('/dashboard');
+          router.push("/dashboard");
           return;
         }
 
         // Fetch sessions
         const sRes = await fetch(`${apiUrl}/sessions?course_id=${courseId}`, {
-          headers: { Authorization: `Bearer ${token}` }
+          headers: { Authorization: `Bearer ${token}` },
         });
         const sData = await sRes.json();
         if (sData.success) {
           setSessions(sData.data);
         }
       } catch (err) {
-        console.error('Failed to fetch data');
+        console.error("Failed to fetch data");
       } finally {
         setIsLoading(false);
       }
@@ -80,36 +80,36 @@ export default function CourseDetail() {
 
   const handleCreateSession = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError('');
+    setError("");
     try {
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api/v1';
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL;
       const response = await fetch(`${apiUrl}/sessions`, {
-        method: 'POST',
+        method: "POST",
         headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({
           course_id: courseId,
           title,
           date,
           start_time: startTime,
-          end_time: endTime
-        })
+          end_time: endTime,
+        }),
       });
       const data = await response.json();
       if (data.success) {
         setSessions([...sessions, data.data]);
         setShowCreateModal(false);
-        setTitle('');
-        setDate('');
-        setStartTime('');
-        setEndTime('');
+        setTitle("");
+        setDate("");
+        setStartTime("");
+        setEndTime("");
       } else {
-        setError(data.message || 'Failed to create session');
+        setError(data.message || "Failed to create session");
       }
     } catch (err) {
-      setError('Network error occurred');
+      setError("Network error occurred");
     }
   };
 
@@ -127,14 +127,19 @@ export default function CourseDetail() {
       <NavBar />
 
       <main className="max-w-4xl mx-auto p-6 md:p-8">
-        <Link href="/dashboard" className="inline-flex items-center gap-2 text-text-secondary hover:text-text-primary transition-colors mb-6">
+        <Link
+          href="/dashboard"
+          className="inline-flex items-center gap-2 text-text-secondary hover:text-text-primary transition-colors mb-6"
+        >
           <ArrowLeft className="w-4 h-4" /> Back to Dashboard
         </Link>
 
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-8 pb-6 border-b border-border">
           <div>
-            <h1 className="text-3xl font-bold text-text-primary mb-2">{course?.name}</h1>
-            {user?.role === 'professor' && (
+            <h1 className="text-3xl font-bold text-text-primary mb-2">
+              {course?.name}
+            </h1>
+            {user?.role === "professor" && (
               <p className="text-sm text-text-muted">
                 Invite Code:{" "}
                 <span className="font-mono bg-surface border border-border px-2 py-1 rounded text-accent tracking-wider ml-1">
@@ -150,7 +155,7 @@ export default function CourseDetail() {
             >
               Knowledge Base
             </Link>
-            {user?.role === 'professor' && (
+            {user?.role === "professor" && (
               <Link
                 href={`/courses/${courseId}/analytics`}
                 className="px-4 py-2 rounded-input border border-border text-sm font-medium text-text-secondary hover:text-text-primary hover:border-text-muted transition-colors"
@@ -158,7 +163,7 @@ export default function CourseDetail() {
                 Analytics
               </Link>
             )}
-            {user?.role === 'professor' && (
+            {user?.role === "professor" && (
               <button
                 onClick={() => setShowCreateModal(true)}
                 className="flex items-center gap-2 bg-accent hover:bg-accent/90 text-white px-4 py-2 rounded-input font-medium transition-colors"
@@ -174,9 +179,13 @@ export default function CourseDetail() {
 
         {sessions.length === 0 ? (
           <div className="bg-surface border border-border rounded-card p-12 text-center shadow-sm">
-            <h3 className="text-lg font-medium text-text-primary mb-2">No sessions scheduled</h3>
+            <h3 className="text-lg font-medium text-text-primary mb-2">
+              No sessions scheduled
+            </h3>
             <p className="text-text-secondary">
-              {user?.role === 'professor' ? 'Create a new session to get started.' : 'Wait for your professor to schedule a session.'}
+              {user?.role === "professor"
+                ? "Create a new session to get started."
+                : "Wait for your professor to schedule a session."}
             </p>
           </div>
         ) : (
@@ -185,16 +194,26 @@ export default function CourseDetail() {
               <Link href={`/sessions/${session.id}`} key={session.id}>
                 <div className="bg-card hover:bg-surface border border-border rounded-card p-6 shadow-sm cursor-pointer transition-colors group">
                   <div className="flex justify-between items-start mb-4">
-                    <h3 className="font-semibold text-text-primary text-lg group-hover:text-accent transition-colors">{session.title}</h3>
-                    <span className={`text-xs px-2 py-1 rounded-full font-medium ${session.status === 'active' ? 'bg-green/10 text-green' :
-                        session.status === 'scheduled' ? 'bg-blue-500/10 text-blue-400' : 'bg-surface text-text-muted'
-                      }`}>
+                    <h3 className="font-semibold text-text-primary text-lg group-hover:text-accent transition-colors">
+                      {session.title}
+                    </h3>
+                    <span
+                      className={`text-xs px-2 py-1 rounded-full font-medium ${
+                        session.status === "active"
+                          ? "bg-green/10 text-green"
+                          : session.status === "scheduled"
+                          ? "bg-blue-500/10 text-blue-400"
+                          : "bg-surface text-text-muted"
+                      }`}
+                    >
                       {session.status.toUpperCase()}
                     </span>
                   </div>
                   <div className="text-sm text-text-secondary space-y-1">
                     <p>Date: {session.date}</p>
-                    <p>Time: {session.start_time} - {session.end_time}</p>
+                    <p>
+                      Time: {session.start_time} - {session.end_time}
+                    </p>
                   </div>
                 </div>
               </Link>
@@ -207,11 +226,19 @@ export default function CourseDetail() {
       {showCreateModal && (
         <div className="fixed inset-0 bg-black/50 flex flex-col items-center justify-center p-4 z-50 overflow-y-auto">
           <div className="bg-card rounded-card border border-border p-6 w-full max-w-md shadow-xl my-8">
-            <h2 className="text-xl font-bold text-text-primary mb-4">Create New Session</h2>
-            {error && <div className="text-red text-sm mb-4 bg-red/10 p-3 rounded-input">{error}</div>}
+            <h2 className="text-xl font-bold text-text-primary mb-4">
+              Create New Session
+            </h2>
+            {error && (
+              <div className="text-red text-sm mb-4 bg-red/10 p-3 rounded-input">
+                {error}
+              </div>
+            )}
             <form onSubmit={handleCreateSession}>
               <div className="mb-4">
-                <label className="block text-sm font-medium text-text-secondary mb-1">Session Title</label>
+                <label className="block text-sm font-medium text-text-secondary mb-1">
+                  Session Title
+                </label>
                 <input
                   type="text"
                   value={title}
@@ -222,7 +249,9 @@ export default function CourseDetail() {
                 />
               </div>
               <div className="mb-4">
-                <label className="block text-sm font-medium text-text-secondary mb-1">Date</label>
+                <label className="block text-sm font-medium text-text-secondary mb-1">
+                  Date
+                </label>
                 <input
                   type="date"
                   value={date}
@@ -233,7 +262,9 @@ export default function CourseDetail() {
               </div>
               <div className="grid grid-cols-2 gap-4 mb-6">
                 <div>
-                  <label className="block text-sm font-medium text-text-secondary mb-1">Start Time</label>
+                  <label className="block text-sm font-medium text-text-secondary mb-1">
+                    Start Time
+                  </label>
                   <input
                     type="time"
                     value={startTime}
@@ -243,7 +274,9 @@ export default function CourseDetail() {
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-text-secondary mb-1">End Time</label>
+                  <label className="block text-sm font-medium text-text-secondary mb-1">
+                    End Time
+                  </label>
                   <input
                     type="time"
                     value={endTime}
