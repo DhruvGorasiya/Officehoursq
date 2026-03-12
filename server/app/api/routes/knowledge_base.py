@@ -3,7 +3,7 @@ from typing import Optional
 from fastapi import APIRouter, Depends, Query
 from fastapi.responses import JSONResponse
 
-from app.schemas.common import ErrorResponse, SuccessResponse
+from app.schemas.common import ErrorResponse, SuccessResponse, PaginatedSuccessResponse
 from app.core.database import supabase
 from app.core.deps import get_current_user
 
@@ -41,7 +41,7 @@ def check_enrollment(user_id: str, role: str, course_id: str) -> bool:
         "Search the knowledge base of resolved questions for a course. Supports keyword search "
         "and category filtering. Paginated at 20 results per page."
     ),
-    response_model=SuccessResponse,
+    response_model=PaginatedSuccessResponse,
     responses={
         403: {
             "model": ErrorResponse,

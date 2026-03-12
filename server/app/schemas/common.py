@@ -65,3 +65,9 @@ class ErrorResponse(BaseModel):
         default=False, description="Always false for error responses"
     )
     message: str = Field(description="Human-readable error message")
+
+
+class PaginatedSuccessResponse(SuccessResponse):
+    page: int = Field(description="Current page number")
+    page_size: int = Field(description="Number of items per page")
+    total_count: int = Field(description="Total number of items across all pages")
