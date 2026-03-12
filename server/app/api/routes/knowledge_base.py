@@ -1,7 +1,9 @@
-from fastapi import APIRouter, Depends, Query
-from fastapi.responses import JSONResponse
 from typing import Optional
 
+from fastapi import APIRouter, Depends, Query
+from fastapi.responses import JSONResponse
+
+from app.schemas.common import ErrorResponse, SuccessResponse
 from app.core.database import supabase
 from app.core.deps import get_current_user
 
@@ -31,7 +33,22 @@ def check_enrollment(user_id: str, role: str, course_id: str) -> bool:
     return bool(res.data)
 
 
-@router.get("")
+@router.get(
+    "",
+    tags=["Knowledge Base"],
+    summary="Search resolved questions",
+    description=(
+        "Search the knowledge base of resolved questions for a course. Supports keyword search "
+        "and category filtering. Paginated at 20 results per page."
+    ),
+    response_model=SuccessResponse,
+    responses={
+        403: {
+            "model": ErrorResponse,
+            "description": "User is not enrolled in this course",
+        },
+    },
+)
 async def search_knowledge_base(
     course_id: str = Query(..., description="Course to search within"),
     search: Optional[str] = Query(None, description="Full-text search query"),
@@ -124,7 +141,22 @@ async def search_knowledge_base(
         )
 
 
-@router.get("/similar")
+@router.get(
+    "/similar",
+    tags=["Knowledge Base"],
+    summary="Find similar resolved questions",
+    description=(
+        "Returns the top 5 resolved questions similar to the given title, matched by keyword. "
+        "Used to show the 'Similar Questions' panel when a student is typing their question title."
+    ),
+    response_model=SuccessResponse,
+    responses={
+        403: {
+            "model": ErrorResponse,
+            "description": "User is not a student in this course",
+        },
+    },
+)
 async def find_similar_questions(
     course_id: str = Query(..., description="Course to search within"),
     title: str = Query(..., min_length=1, description="Title text to find similar matches for"),

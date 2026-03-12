@@ -1,13 +1,30 @@
 from fastapi import APIRouter, Depends
 from fastapi.responses import JSONResponse
-from app.schemas.auth import RegisterRequest, LoginRequest, AuthResponse
-from app.schemas.common import SuccessResponse
+
+from app.schemas.auth import AuthResponse, LoginRequest, RegisterRequest
+from app.schemas.common import ErrorResponse, SuccessResponse
 from app.core.database import supabase
 from app.core.deps import get_current_user
 
 router = APIRouter()
 
-@router.post("/register")
+
+@router.post(
+    "/register",
+    tags=["Auth"],
+    summary="Register a new user",
+    description=(
+        "Create a new account with email, password, name, and role. "
+        "Returns a JWT token and user object."
+    ),
+    response_model=SuccessResponse,
+    responses={
+        400: {
+            "model": ErrorResponse,
+            "description": "Email already registered, or validation error",
+        },
+    },
+)
 async def register(req: RegisterRequest):
     try:
         res = supabase.auth.sign_up({
@@ -58,7 +75,21 @@ async def register(req: RegisterRequest):
         traceback.print_exc()
         return JSONResponse(status_code=400, content={"success": False, "message": str(e)})
 
-@router.post("/login")
+@router.post(
+    "/login",
+    tags=["Auth"],
+    summary="Login with email and password",
+    description=(
+        "Authenticate with email and password. Returns a JWT token and user object."
+    ),
+    response_model=SuccessResponse,
+    responses={
+        401: {
+            "model": ErrorResponse,
+            "description": "Invalid email or password",
+        },
+    },
+)
 async def login(req: LoginRequest):
     try:
         res = supabase.auth.sign_in_with_password({
@@ -91,7 +122,21 @@ async def login(req: LoginRequest):
     except Exception as e:
         return JSONResponse(status_code=401, content={"success": False, "message": str(e)})
 
-@router.get("/me")
+@router.get(
+    "/me",
+    tags=["Auth"],
+    summary="Get current user",
+    description=(
+        "Returns the authenticated user's profile. Requires a valid JWT Bearer token."
+    ),
+    response_model=SuccessResponse,
+    responses={
+        401: {
+            "model": ErrorResponse,
+            "description": "Missing or invalid JWT token",
+        },
+    },
+)
 async def get_me(user_payload: dict = Depends(get_current_user)):
     user_id = user_payload.get("sub")
     if not user_id:

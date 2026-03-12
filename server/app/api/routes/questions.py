@@ -1,8 +1,10 @@
-from fastapi import APIRouter, Depends
-from fastapi.responses import JSONResponse
 from datetime import datetime, timezone
 
-from app.schemas.questions import QuestionCreate, QuestionUpdate, QuestionResolve
+from fastapi import APIRouter, Depends, Query
+from fastapi.responses import JSONResponse
+
+from app.schemas.common import ErrorResponse, SuccessResponse
+from app.schemas.questions import QuestionCreate, QuestionResolve, QuestionUpdate
 from app.core.database import supabase
 from app.core.deps import get_current_user, require_role
 from app.utils.realtime_broadcast import (
@@ -78,7 +80,27 @@ def recalculate_queue(session_id: str):
         payload={"questions": refreshed.data or []},
     )
 
-@router.post("")
+@router.post(
+    "",
+    tags=["Questions"],
+    summary="Submit a question to an active session",
+    description=(
+        "Student submits a new question. Fails if the session is not active, or if the "
+        "student already has an active question (queued or in_progress) in this session. "
+        "Limit: one active question per student per session."
+    ),
+    response_model=SuccessResponse,
+    responses={
+        400: {
+            "model": ErrorResponse,
+            "description": "Session not active, or student already has an active question in this session",
+        },
+        403: {
+            "model": ErrorResponse,
+            "description": "User is not a student",
+        },
+    },
+)
 async def create_question(req: QuestionCreate, user: dict = Depends(require_role("student"))):
     try:
         session_id = req.session_id
@@ -116,8 +138,29 @@ async def create_question(req: QuestionCreate, user: dict = Depends(require_role
     except Exception as e:
         return JSONResponse(status_code=400, content={"success": False, "message": str(e)})
 
-@router.get("")
-async def list_questions(session_id: str, user: dict = Depends(get_current_user)):
+@router.get(
+    "",
+    tags=["Questions"],
+    summary="List questions for a session",
+    description=(
+        "Returns all questions for a given session_id. Only TAs and Professors can view "
+        "the full queue; students only see their own questions."
+    ),
+    response_model=SuccessResponse,
+    responses={
+        403: {
+            "model": ErrorResponse,
+            "description": "User is not a TA or professor for full queue view",
+        },
+    },
+)
+async def list_questions(
+    session_id: str = Query(
+        ...,
+        description="Filter questions by session ID",
+    ),
+    user: dict = Depends(get_current_user),
+):
     try:
         # Returns all questions for TA/professor, or only their own for student
         role = user.get("role", "student")
@@ -130,7 +173,26 @@ async def list_questions(session_id: str, user: dict = Depends(get_current_user)
     except Exception as e:
         return JSONResponse(status_code=400, content={"success": False, "message": str(e)})
 
-@router.get("/{q_id}")
+@router.get(
+    "/{q_id}",
+    tags=["Questions"],
+    summary="Get a single question",
+    description=(
+        "Returns question details. Accessible by the student who submitted it, any TA in "
+        "the session, or the professor."
+    ),
+    response_model=SuccessResponse,
+    responses={
+        403: {
+            "model": ErrorResponse,
+            "description": "User does not have access to this question",
+        },
+        404: {
+            "model": ErrorResponse,
+            "description": "Question not found",
+        },
+    },
+)
 async def get_question(q_id: str, user: dict = Depends(get_current_user)):
     try:
         res = supabase.table("questions").select("*").eq("id", q_id).single().execute()
@@ -145,7 +207,30 @@ async def get_question(q_id: str, user: dict = Depends(get_current_user)):
     except Exception as e:
         return JSONResponse(status_code=400, content={"success": False, "message": str(e)})
 
-@router.put("/{q_id}")
+@router.put(
+    "/{q_id}",
+    tags=["Questions"],
+    summary="Edit a queued question",
+    description=(
+        "Student edits their own question. Only allowed when the question status is 'queued'. "
+        "Cannot edit questions that are in_progress, resolved, withdrawn, or deferred."
+    ),
+    response_model=SuccessResponse,
+    responses={
+        400: {
+            "model": ErrorResponse,
+            "description": "Question is not in queued status",
+        },
+        403: {
+            "model": ErrorResponse,
+            "description": "User is not the question owner",
+        },
+        404: {
+            "model": ErrorResponse,
+            "description": "Question not found",
+        },
+    },
+)
 async def update_question(q_id: str, req: QuestionUpdate, user: dict = Depends(require_role("student"))):
     try:
         q_res = supabase.table("questions").select("student_id, status").eq("id", q_id).single().execute()
@@ -166,7 +251,31 @@ async def update_question(q_id: str, req: QuestionUpdate, user: dict = Depends(r
     except Exception as e:
         return JSONResponse(status_code=400, content={"success": False, "message": str(e)})
 
-@router.patch("/{q_id}/claim")
+@router.patch(
+    "/{q_id}/claim",
+    tags=["Questions"],
+    summary="Claim a question",
+    description=(
+        "TA or professor claims a queued question to start helping. Sets status to in_progress "
+        "and records claimed_by and claimed_at. Fails if the question is already claimed or "
+        "not in a claimable state."
+    ),
+    response_model=SuccessResponse,
+    responses={
+        400: {
+            "model": ErrorResponse,
+            "description": "Question is not queued or is already claimed",
+        },
+        403: {
+            "model": ErrorResponse,
+            "description": "User is not a TA or professor",
+        },
+        404: {
+            "model": ErrorResponse,
+            "description": "Question not found",
+        },
+    },
+)
 async def claim_question(q_id: str, user: dict = Depends(require_role("ta", "professor"))):
     try:
         q_res = supabase.table("questions").select("status, session_id").eq("id", q_id).single().execute()
@@ -210,7 +319,30 @@ async def claim_question(q_id: str, user: dict = Depends(require_role("ta", "pro
     except Exception as e:
         return JSONResponse(status_code=400, content={"success": False, "message": str(e)})
 
-@router.patch("/{q_id}/resolve")
+@router.patch(
+    "/{q_id}/resolve",
+    tags=["Questions"],
+    summary="Resolve a question",
+    description=(
+        "TA or professor resolves a question with a resolution note. Works from queued, "
+        "in_progress, or deferred status (TAs can resolve without claiming first)."
+    ),
+    response_model=SuccessResponse,
+    responses={
+        400: {
+            "model": ErrorResponse,
+            "description": "Question cannot be resolved from its current status",
+        },
+        403: {
+            "model": ErrorResponse,
+            "description": "User is not a TA or professor",
+        },
+        404: {
+            "model": ErrorResponse,
+            "description": "Question not found",
+        },
+    },
+)
 async def resolve_question(q_id: str, req: QuestionResolve, user: dict = Depends(require_role("ta", "professor"))):
     try:
         q_res = supabase.table("questions").select("status, session_id").eq("id", q_id).single().execute()
@@ -252,7 +384,31 @@ async def resolve_question(q_id: str, req: QuestionResolve, user: dict = Depends
     except Exception as e:
         return JSONResponse(status_code=400, content={"success": False, "message": str(e)})
 
-@router.patch("/{q_id}/defer")
+@router.patch(
+    "/{q_id}/defer",
+    tags=["Questions"],
+    summary="Defer a question to back of queue",
+    description=(
+        "TA or professor defers a question. Status is set to deferred, then the question is "
+        "re-queued at the absolute back of the queue regardless of priority. Clears claimed_by "
+        "and sets deferred_at."
+    ),
+    response_model=SuccessResponse,
+    responses={
+        400: {
+            "model": ErrorResponse,
+            "description": "Question cannot be deferred from its current status",
+        },
+        403: {
+            "model": ErrorResponse,
+            "description": "User is not a TA or professor",
+        },
+        404: {
+            "model": ErrorResponse,
+            "description": "Question not found",
+        },
+    },
+)
 async def defer_question(q_id: str, user: dict = Depends(require_role("ta", "professor"))):
     try:
         q_res = supabase.table("questions").select("status, session_id").eq("id", q_id).single().execute()
@@ -295,7 +451,30 @@ async def defer_question(q_id: str, user: dict = Depends(require_role("ta", "pro
     except Exception as e:
         return JSONResponse(status_code=400, content={"success": False, "message": str(e)})
 
-@router.patch("/{q_id}/withdraw")
+@router.patch(
+    "/{q_id}/withdraw",
+    tags=["Questions"],
+    summary="Withdraw a question",
+    description=(
+        "Student withdraws their own question. Only allowed when status is queued, "
+        "in_progress, or deferred. Cannot withdraw resolved or already-withdrawn questions."
+    ),
+    response_model=SuccessResponse,
+    responses={
+        400: {
+            "model": ErrorResponse,
+            "description": "Question is not in a withdrawable status",
+        },
+        403: {
+            "model": ErrorResponse,
+            "description": "User is not the question owner",
+        },
+        404: {
+            "model": ErrorResponse,
+            "description": "Question not found",
+        },
+    },
+)
 async def withdraw_question(q_id: str, user: dict = Depends(require_role("student"))):
     try:
         q_res = supabase.table("questions").select("student_id, status, session_id").eq("id", q_id).single().execute()
@@ -328,7 +507,30 @@ async def withdraw_question(q_id: str, user: dict = Depends(require_role("studen
         return JSONResponse(status_code=400, content={"success": False, "message": str(e)})
 
 
-@router.post("/{q_id}/helpful")
+@router.post(
+    "/{q_id}/helpful",
+    tags=["Questions"],
+    summary="Vote a question as helpful",
+    description=(
+        "Student votes a resolved question as helpful. One vote per student per question, "
+        "enforced by a database unique constraint. Duplicate votes return 400."
+    ),
+    response_model=SuccessResponse,
+    responses={
+        400: {
+            "model": ErrorResponse,
+            "description": "Already voted on this question or question is not resolved",
+        },
+        403: {
+            "model": ErrorResponse,
+            "description": "User is not a student",
+        },
+        404: {
+            "model": ErrorResponse,
+            "description": "Question not found",
+        },
+    },
+)
 async def mark_question_helpful(q_id: str, user: dict = Depends(require_role("student"))):
     try:
         student_id = user["sub"]

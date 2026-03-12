@@ -13,7 +13,46 @@ from app.api.routes import (
 )
 
 app = FastAPI(
-    title=settings.PROJECT_NAME,
+    title="OfficeHoursQ API",
+    description=(
+        "Real-time office hours queue management API for university courses. "
+        "Supports three user roles: Student, TA, and Professor. "
+        "Features include question queue management, real-time updates via Supabase Realtime, "
+        "knowledge base search, and analytics dashboards."
+    ),
+    version="1.0.0",
+    contact={"name": "OfficeHoursQ Team"},
+    license_info={"name": "MIT"},
+    openapi_tags=[
+        {
+            "name": "Auth",
+            "description": "User registration, login, and authentication",
+        },
+        {
+            "name": "Courses",
+            "description": "Course creation, enrollment, and management",
+        },
+        {
+            "name": "Sessions",
+            "description": "Office hours session scheduling and lifecycle",
+        },
+        {
+            "name": "Questions",
+            "description": "Question submission, claiming, resolving, and queue management",
+        },
+        {
+            "name": "Knowledge Base",
+            "description": "Search resolved questions and find similar past questions",
+        },
+        {
+            "name": "Analytics",
+            "description": "Professor-only dashboards: overview, categories, trends, TA performance",
+        },
+        {
+            "name": "Notifications",
+            "description": "User notification retrieval and read status management",
+        },
+    ],
     openapi_url=f"{settings.API_V1_PREFIX}/openapi.json",
 )
 

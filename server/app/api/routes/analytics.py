@@ -4,6 +4,13 @@ from typing import Dict, List, Optional
 from fastapi import APIRouter, Depends, Query
 from fastapi.responses import JSONResponse, StreamingResponse
 
+from app.schemas.analytics import (
+    CategoryBreakdown,
+    OverviewResponse,
+    TAPerformance,
+    WeeklyTrend,
+)
+from app.schemas.common import ErrorResponse, SuccessResponse
 from app.core.database import supabase
 from app.core.deps import require_role
 
@@ -35,7 +42,22 @@ def _parse_timestamp(value: Optional[str]) -> Optional[datetime]:
         return None
 
 
-@router.get("/overview")
+@router.get(
+    "/overview",
+    tags=["Analytics"],
+    summary="Get analytics overview",
+    description=(
+        "Professor-only. Returns total questions, average wait time, average resolve time, "
+        "and recent session summaries for a course."
+    ),
+    response_model=SuccessResponse,
+    responses={
+        403: {
+            "model": ErrorResponse,
+            "description": "User is not a professor or does not own the course",
+        },
+    },
+)
 async def analytics_overview(
     course_id: str = Query(..., description="Course to analyze"),
     user: Dict = Depends(require_role("professor")),
@@ -141,7 +163,22 @@ async def analytics_overview(
         )
 
 
-@router.get("/categories")
+@router.get(
+    "/categories",
+    tags=["Analytics"],
+    summary="Get category breakdown",
+    description=(
+        "Professor-only. Returns the distribution of resolved questions across categories "
+        "(debugging, conceptual, setup, assignment, other) with counts and percentages."
+    ),
+    response_model=SuccessResponse,
+    responses={
+        403: {
+            "model": ErrorResponse,
+            "description": "User is not a professor or does not own the course",
+        },
+    },
+)
 async def analytics_categories(
     course_id: str = Query(..., description="Course to analyze"),
     user: Dict = Depends(require_role("professor")),
@@ -200,7 +237,21 @@ async def analytics_categories(
         )
 
 
-@router.get("/trends")
+@router.get(
+    "/trends",
+    tags=["Analytics"],
+    summary="Get weekly question trends",
+    description=(
+        "Professor-only. Returns question volume per week and highlights the peak week and session."
+    ),
+    response_model=SuccessResponse,
+    responses={
+        403: {
+            "model": ErrorResponse,
+            "description": "User is not a professor or does not own the course",
+        },
+    },
+)
 async def analytics_trends(
     course_id: str = Query(..., description="Course to analyze"),
     user: Dict = Depends(require_role("professor")),
@@ -280,7 +331,21 @@ async def analytics_trends(
         )
 
 
-@router.get("/ta-performance")
+@router.get(
+    "/ta-performance",
+    tags=["Analytics"],
+    summary="Get TA performance metrics",
+    description=(
+        "Professor-only. Returns per-TA stats: resolved count, average resolve time, and rating."
+    ),
+    response_model=SuccessResponse,
+    responses={
+        403: {
+            "model": ErrorResponse,
+            "description": "User is not a professor or does not own the course",
+        },
+    },
+)
 async def analytics_ta_performance(
     course_id: str = Query(..., description="Course to analyze"),
     user: Dict = Depends(require_role("professor")),
@@ -387,7 +452,21 @@ async def analytics_ta_performance(
         )
 
 
-@router.get("/export")
+@router.get(
+    "/export",
+    tags=["Analytics"],
+    summary="Export analytics as CSV",
+    description=(
+        "Professor-only. Downloads a CSV file with analytics data for the course. "
+        "Returns a file response, not JSON."
+    ),
+    responses={
+        403: {
+            "model": ErrorResponse,
+            "description": "User is not a professor or does not own the course",
+        },
+    },
+)
 async def analytics_export_csv(
     course_id: str = Query(..., description="Course to export analytics for"),
     user: Dict = Depends(require_role("professor")),

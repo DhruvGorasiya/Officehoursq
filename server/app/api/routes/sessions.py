@@ -1,14 +1,33 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Query
 from fastapi.responses import JSONResponse
 
-from app.schemas.sessions import SessionCreate, SessionUpdate, SessionStatusUpdate
+from app.schemas.common import ErrorResponse, SuccessResponse
+from app.schemas.sessions import SessionCreate, SessionStatusUpdate, SessionUpdate
 from app.core.database import supabase
 from app.core.deps import get_current_user, require_role
-from app.utils.realtime_broadcast import broadcast_course_session_status, broadcast_session_event
+from app.utils.realtime_broadcast import (
+    broadcast_course_session_status,
+    broadcast_session_event,
+)
 
 router = APIRouter()
 
-@router.post("")
+
+@router.post(
+    "",
+    tags=["Sessions"],
+    summary="Create a new session",
+    description=(
+        "Professor creates an office hours session with title, time, assigned TAs, and topics."
+    ),
+    response_model=SuccessResponse,
+    responses={
+        403: {
+            "model": ErrorResponse,
+            "description": "User is not a professor",
+        },
+    },
+)
 async def create_session(
     req: SessionCreate,
     user: dict = Depends(require_role("professor"))
@@ -39,8 +58,28 @@ async def create_session(
     except Exception as e:
         return JSONResponse(status_code=400, content={"success": False, "message": str(e)})
 
-@router.get("")
-async def list_sessions(course_id: str, user: dict = Depends(get_current_user)):
+@router.get(
+    "",
+    tags=["Sessions"],
+    summary="List sessions for a course",
+    description=(
+        "Returns all sessions for a given course_id. User must be enrolled in the course."
+    ),
+    response_model=SuccessResponse,
+    responses={
+        403: {
+            "model": ErrorResponse,
+            "description": "User is not enrolled in this course",
+        },
+    },
+)
+async def list_sessions(
+    course_id: str = Query(
+        ...,
+        description="Filter sessions by course ID",
+    ),
+    user: dict = Depends(get_current_user),
+):
     try:
         # Simplification: assuming enrolled, should strictly check course_enrollments
         res = supabase.table("sessions").select("*").eq("course_id", course_id).execute()
@@ -48,7 +87,26 @@ async def list_sessions(course_id: str, user: dict = Depends(get_current_user)):
     except Exception as e:
         return JSONResponse(status_code=400, content={"success": False, "message": str(e)})
 
-@router.get("/{session_id}")
+@router.get(
+    "/{session_id}",
+    tags=["Sessions"],
+    summary="Get session details",
+    description=(
+        "Returns session details with course name and assigned TAs. "
+        "User must be enrolled in the course or be the owning professor."
+    ),
+    response_model=SuccessResponse,
+    responses={
+        403: {
+            "model": ErrorResponse,
+            "description": "User is not enrolled in this course",
+        },
+        404: {
+            "model": ErrorResponse,
+            "description": "Session not found",
+        },
+    },
+)
 async def get_session(session_id: str, user: dict = Depends(get_current_user)):
     try:
         session_res = supabase.table("sessions").select("*, courses(name, professor_id)").eq("id", session_id).single().execute()
@@ -81,7 +139,30 @@ async def get_session(session_id: str, user: dict = Depends(get_current_user)):
             return JSONResponse(status_code=404, content={"success": False, "message": "Session not found"})
         return JSONResponse(status_code=400, content={"success": False, "message": str(e)})
 
-@router.put("/{session_id}")
+@router.put(
+    "/{session_id}",
+    tags=["Sessions"],
+    summary="Update a scheduled session",
+    description=(
+        "Professor updates session details. Only allowed when session status is 'scheduled'. "
+        "Cannot edit active or ended sessions."
+    ),
+    response_model=SuccessResponse,
+    responses={
+        400: {
+            "model": ErrorResponse,
+            "description": "Session is not in scheduled status",
+        },
+        403: {
+            "model": ErrorResponse,
+            "description": "User is not a professor",
+        },
+        404: {
+            "model": ErrorResponse,
+            "description": "Session not found",
+        },
+    },
+)
 async def update_session(
     session_id: str,
     req: SessionUpdate,
@@ -124,7 +205,30 @@ async def update_session(
     except Exception as e:
         return JSONResponse(status_code=400, content={"success": False, "message": str(e)})
 
-@router.delete("/{session_id}")
+@router.delete(
+    "/{session_id}",
+    tags=["Sessions"],
+    summary="Delete a scheduled session",
+    description=(
+        "Professor deletes a session. Only allowed when status is 'scheduled'. "
+        "Cannot delete active sessions."
+    ),
+    response_model=SuccessResponse,
+    responses={
+        400: {
+            "model": ErrorResponse,
+            "description": "Session is not in scheduled status, or session is active",
+        },
+        403: {
+            "model": ErrorResponse,
+            "description": "User is not a professor",
+        },
+        404: {
+            "model": ErrorResponse,
+            "description": "Session not found",
+        },
+    },
+)
 async def delete_session(session_id: str, user: dict = Depends(require_role("professor"))):
     try:
         session_res = supabase.table("sessions").select("status, course_id").eq("id", session_id).single().execute()
@@ -143,7 +247,31 @@ async def delete_session(session_id: str, user: dict = Depends(require_role("pro
     except Exception as e:
         return JSONResponse(status_code=400, content={"success": False, "message": str(e)})
 
-@router.patch("/{session_id}/status")
+@router.patch(
+    "/{session_id}/status",
+    tags=["Sessions"],
+    summary="Change session status",
+    description=(
+        "Professor or TA changes session status. Valid transitions: scheduled to active "
+        "(fails if another session in the same course is already active), active to ended "
+        "(marks all remaining queued questions as unresolved and notifies students)."
+    ),
+    response_model=SuccessResponse,
+    responses={
+        400: {
+            "model": ErrorResponse,
+            "description": "Invalid status transition, or another session is already active",
+        },
+        403: {
+            "model": ErrorResponse,
+            "description": "User is not a professor or TA",
+        },
+        404: {
+            "model": ErrorResponse,
+            "description": "Session not found",
+        },
+    },
+)
 async def update_session_status(
     session_id: str,
     req: SessionStatusUpdate,
