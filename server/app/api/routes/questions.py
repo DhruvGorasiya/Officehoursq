@@ -103,20 +103,34 @@ def recalculate_queue(session_id: str):
 )
 async def create_question(req: QuestionCreate, user: dict = Depends(require_role("student"))):
     try:
-        session_id = req.session_id
+        session_id = str(req.session_id)
         student_id = user["sub"]
         
         # Check if session is active and get course_id for denormalized storage
-        session_res = supabase.table("sessions").select("status, course_id").eq("id", session_id).single().execute()
+        session_res = (
+            supabase.table("sessions")
+            .select("status, course_id")
+            .eq("id", session_id)
+            .single()
+            .execute()
+        )
         if not session_res.data or session_res.data["status"] != "active":
             return JSONResponse(status_code=400, content={"success": False, "message": "Session is not active"})
             
         # Check if student already has active question
-        existing = supabase.table("questions").select("id").eq("session_id", session_id).eq("student_id", student_id).in_("status", ["queued", "in_progress"]).execute()
+        existing = (
+            supabase.table("questions")
+            .select("id")
+            .eq("session_id", session_id)
+            .eq("student_id", student_id)
+            .in_("status", ["queued", "in_progress"])
+            .execute()
+        )
         if existing.data:
             return JSONResponse(status_code=400, content={"success": False, "message": "You already have an active question in this session"})
             
         q_data = req.model_dump()
+        q_data["session_id"] = session_id
         q_data["student_id"] = student_id
         q_data["course_id"] = session_res.data["course_id"]
         q_data["status"] = "queued"
