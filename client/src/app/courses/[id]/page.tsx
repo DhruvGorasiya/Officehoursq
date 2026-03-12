@@ -151,6 +151,14 @@ export default function CourseDetail() {
               Knowledge Base
             </Link>
             {user?.role === 'professor' && (
+              <Link
+                href={`/courses/${courseId}/analytics`}
+                className="px-4 py-2 rounded-input border border-border text-sm font-medium text-text-secondary hover:text-text-primary hover:border-text-muted transition-colors"
+              >
+                Analytics
+              </Link>
+            )}
+            {user?.role === 'professor' && (
               <button
                 onClick={() => setShowCreateModal(true)}
                 className="flex items-center gap-2 bg-accent hover:bg-accent/90 text-white px-4 py-2 rounded-input font-medium transition-colors"
