@@ -15,7 +15,7 @@ class Settings(BaseSettings):
 
     CORS_ORIGINS: list[str] = [
         "http://localhost:3000",
-        "https://officehoursq-theta.vercel.app/",
+        "https://officehoursq-theta.vercel.app",
     ]
 
     model_config = {"env_file": ".env", "extra": "ignore"}
