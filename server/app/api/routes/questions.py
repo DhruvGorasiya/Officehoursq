@@ -32,7 +32,6 @@ def recalculate_queue(session_id: str):
     - avg_resolve_time_minutes for the session (default 5.0 if no history)
     - estimated_wait_minutes = min(round(position * avg_resolve_time), 60)
     """
-    priority_map = {"high": 0, "medium": 1, "low": 2}
 
     active = (
         supabase.table("questions")
@@ -594,7 +593,7 @@ async def mark_question_helpful(q_id: str, user: dict = Depends(require_role("st
         updated = update_res.data[0] if update_res.data else None
 
         return {"success": True, "data": updated or {"id": q_id, "helpful_votes": new_count}}
-    except Exception as e:
+    except Exception as _e:
         return JSONResponse(
-            status_code=400, content={"success": False, "message": str(e)}
+            status_code=400, content={"success": False, "message": str(_e)}
         )

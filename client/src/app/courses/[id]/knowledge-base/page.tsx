@@ -22,7 +22,7 @@ interface KnowledgeBaseItem {
 const PAGE_SIZE = 20;
 
 export default function CourseKnowledgeBasePage() {
-  const { user: _user, token, role: _role } = useAuth();
+  const { user: _user, token } = useAuth();
   const params = useParams();
   const [_course, _setCourse] = useState<any>(null);
   const courseId = params?.id as string;

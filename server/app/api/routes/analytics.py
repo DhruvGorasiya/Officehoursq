@@ -6,12 +6,7 @@ from typing import Dict, List, Optional
 from fastapi import APIRouter, Depends, Query
 from fastapi.responses import JSONResponse, StreamingResponse
 
-from app.schemas.analytics import (
-    CategoryBreakdown,
-    OverviewResponse,
-    TAPerformance,
-    WeeklyTrend,
-)
+
 from app.schemas.common import ErrorResponse, SuccessResponse
 from app.core.database import supabase
 from app.core.deps import require_role
@@ -378,7 +373,6 @@ async def analytics_ta_performance(
                 continue
 
             created = _parse_timestamp(q.get("created_at"))
-            claimed = _parse_timestamp(q.get("claimed_at"))
             resolved = _parse_timestamp(q.get("resolved_at"))
 
             # Use created->resolved as total resolution time.

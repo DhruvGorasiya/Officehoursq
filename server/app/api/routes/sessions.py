@@ -40,7 +40,6 @@ async def create_session(
         
         session_data = {
             "course_id": str(req.course_id),
-            "course_id": str(req.course_id),
             "title": req.title,
             "date": req.date.isoformat(),
             "start_time": req.start_time.isoformat(),
@@ -185,10 +184,14 @@ async def update_session(
             return JSONResponse(status_code=403, content={"success": False, "message": "Not authorized"})
             
         update_data = {}
-        if req.title: update_data["title"] = req.title
-        if req.date: update_data["date"] = req.date.isoformat()
-        if req.start_time: update_data["start_time"] = req.start_time.isoformat()
-        if req.end_time: update_data["end_time"] = req.end_time.isoformat()
+        if req.title:
+            update_data["title"] = req.title
+        if req.date:
+            update_data["date"] = req.date.isoformat()
+        if req.start_time:
+            update_data["start_time"] = req.start_time.isoformat()
+        if req.end_time:
+            update_data["end_time"] = req.end_time.isoformat()
         
         if update_data:
             res = supabase.table("sessions").update(update_data).eq("id", session_id).execute()
