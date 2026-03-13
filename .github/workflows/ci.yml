@@ -68,6 +68,8 @@ jobs:
     name: "Stage 2: Backend Tests"
     runs-on: ubuntu-latest
     needs: lint-and-build
+    env:
+      JWT_SECRET: ${{ secrets.JWT_SECRET }}
 
     steps:
       - name: Checkout code
