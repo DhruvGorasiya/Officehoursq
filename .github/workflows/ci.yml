@@ -8,9 +8,9 @@ on:
     branches: [main]
 
 env:
-  SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
-  SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
-  SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+  SUPABASE_URL: ${{ vars.SUPABASE_URL }}
+  SUPABASE_KEY: ${{ vars.SUPABASE_KEY }}
+  SUPABASE_SERVICE_ROLE_KEY: ${{ vars.SUPABASE_SERVICE_ROLE_KEY }}
 
 # ============================================================
 # STAGE 1: Lint & Build
@@ -69,7 +69,7 @@ jobs:
     runs-on: ubuntu-latest
     needs: lint-and-build
     env:
-      JWT_SECRET: ${{ secrets.JWT_SECRET }}
+      JWT_SECRET: ${{ vars.JWT_SECRET }}
 
     steps:
       - name: Checkout code
@@ -103,7 +103,7 @@ jobs:
           files: ./server/coverage.xml
           flags: backend
           name: backend-coverage
-          token: ${{ secrets.CODECOV_TOKEN }}
+          token: ${{ vars.CODECOV_TOKEN }}
           fail_ci_if_error: false
 
       - name: Upload coverage HTML report
@@ -145,7 +145,7 @@ jobs:
           files: ./client/coverage/coverage-final.json
           flags: frontend
           name: frontend-coverage
-          token: ${{ secrets.CODECOV_TOKEN }}
+          token: ${{ vars.CODECOV_TOKEN }}
           fail_ci_if_error: false
 
   # ============================================================
@@ -202,7 +202,7 @@ jobs:
 
     steps:
       - name: Trigger Render deploy
-        run: curl -X POST "${{ secrets.RENDER_DEPLOY_HOOK }}"
+        run: curl -X POST "${{ vars.RENDER_DEPLOY_HOOK }}"
 
       - name: Deployment summary
         run: |
