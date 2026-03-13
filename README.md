@@ -2,6 +2,10 @@
 
 Real-time office hours queue management system for university courses. Three roles: **Student** (submits questions), **TA** (manages the queue), and **Professor** (analytics and session management).
 
+### Demo Video Link
+
+https://youtu.be/nLZI8-vQQw4
+
 ### Tech Stack
 
 | Layer        | Technology                                                                 |
