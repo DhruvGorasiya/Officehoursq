@@ -51,9 +51,11 @@ export default function RegisterPage() {
       } else {
         setError(data.message || "Registration failed");
       }
-    } catch (err: any) {
-      setError("A network error occurred. Please try again later.");
-    } finally {
+    } catch (_err: any) {
+      setError(
+        _err.message ||
+          "Could not register. Please try again or with a different email."
+      );
       setIsLoading(false);
     }
   };

@@ -41,7 +41,7 @@ export default function HelpfulVoteButton({
       } else {
         setError(res.message || "Could not record vote");
       }
-    } catch (e) {
+    } catch (_e) {
       setError("Network error");
     } finally {
       setLoading(false);

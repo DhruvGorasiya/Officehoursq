@@ -68,7 +68,7 @@ export default function CourseDetail() {
         if (sData.success) {
           setSessions(sData.data);
         }
-      } catch (err) {
+      } catch (_err) {
         console.error("Failed to fetch data");
       } finally {
         setIsLoading(false);
@@ -108,8 +108,8 @@ export default function CourseDetail() {
       } else {
         setError(data.message || "Failed to create session");
       }
-    } catch (err) {
-      setError("Network error occurred");
+    } catch (_err) {
+      setError("Network connection failed.");
     }
   };
 

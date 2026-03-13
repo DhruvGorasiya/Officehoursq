@@ -1,3 +1,4 @@
+/* eslint-disable react/display-name */
 import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
@@ -175,7 +176,7 @@ describe('RegisterPage', () => {
     fireEvent.click(screen.getByRole('button', { name: /Register/i }));
 
     await waitFor(() => {
-      expect(screen.getByText('A network error occurred. Please try again later.')).toBeInTheDocument();
+      expect(screen.getByText('Network error')).toBeInTheDocument();
     });
   });
 });

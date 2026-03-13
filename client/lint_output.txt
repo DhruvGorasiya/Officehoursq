@@ -1,0 +1,43 @@
+
+> client@0.1.0 lint
+> eslint
+
+
+/Users/xuanbai/Downloads/Officehoursq/client/coverage/lcov-report/block-navigation.js
+  1:1  warning  Unused eslint-disable directive (no problems were reported)
+
+/Users/xuanbai/Downloads/Officehoursq/client/src/app/(auth)/register/page.tsx
+  54:20  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/Users/xuanbai/Downloads/Officehoursq/client/src/app/courses/[id]/knowledge-base/page.tsx
+  27:42  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/Users/xuanbai/Downloads/Officehoursq/client/src/app/dashboard/page.tsx
+  47:6  warning  React Hook useEffect has a missing dependency: 'fetchCourses'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+/Users/xuanbai/Downloads/Officehoursq/client/src/app/sessions/[id]/page.tsx
+  35:50  warning  Unexpected any. Specify a different type                                                                                     @typescript-eslint/no-explicit-any
+  36:46  warning  Unexpected any. Specify a different type                                                                                     @typescript-eslint/no-explicit-any
+  72:6   warning  React Hook useEffect has a missing dependency: 'fetchSessionAndQuestions'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+  99:31  warning  Unexpected any. Specify a different type                                                                                     @typescript-eslint/no-explicit-any
+
+/Users/xuanbai/Downloads/Officehoursq/client/src/components/professor/AnalyticsDashboard.tsx
+  36:19  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/Users/xuanbai/Downloads/Officehoursq/client/src/components/questions/QuestionSubmissionForm.tsx
+   15:19  warning  Unexpected any. Specify a different type                                                                          @typescript-eslint/no-explicit-any
+   43:60  warning  Unexpected any. Specify a different type                                                                          @typescript-eslint/no-explicit-any
+  113:6   warning  React Hook useEffect has a missing dependency: 'debounceTimer'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+/Users/xuanbai/Downloads/Officehoursq/client/src/hooks/useRealtimeChannel.ts
+   6:39  warning  Unexpected any. Specify a different type                                                                     @typescript-eslint/no-explicit-any
+   7:38  warning  Unexpected any. Specify a different type                                                                     @typescript-eslint/no-explicit-any
+   8:43  warning  Unexpected any. Specify a different type                                                                     @typescript-eslint/no-explicit-any
+  81:6   warning  React Hook useEffect has a missing dependency: 'handlers'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+/Users/xuanbai/Downloads/Officehoursq/client/src/lib/supabaseClient.ts
+  11:3  warning  Unused eslint-disable directive (no problems were reported from 'no-console')
+
+✖ 17 problems (0 errors, 17 warnings)
+  0 errors and 2 warnings potentially fixable with the `--fix` option.
+

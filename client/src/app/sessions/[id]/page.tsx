@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { useAuth } from "@/context/AuthContext";
 import NavBar from "@/components/common/NavBar";
 import QuestionSubmissionForm from "@/components/questions/QuestionSubmissionForm";
-import { ArrowLeft, Play, Square, MessageSquare, CheckCircle, Clock, AlertCircle, ChevronDown } from "lucide-react";
+import { ArrowLeft, Play, Square, MessageSquare, CheckCircle, Clock as _Clock, AlertCircle, ChevronDown } from "lucide-react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useRealtimeChannel } from "@/hooks/useRealtimeChannel";

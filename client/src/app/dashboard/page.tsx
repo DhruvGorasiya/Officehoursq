@@ -35,8 +35,8 @@ export default function Dashboard() {
       if (data.success) {
         setCourses(data.data);
       }
-    } catch (err) {
-      console.error("Failed to fetch courses");
+    } catch (_err) {
+      setError("Failed to fetch courses. Please try again.");
     } finally {
       setIsLoading(false);
     }
@@ -67,7 +67,7 @@ export default function Dashboard() {
       } else {
         setError(data.message || "Failed to create course");
       }
-    } catch (err) {
+    } catch (_err) {
       setError("Network error occurred");
     }
   };
@@ -93,7 +93,7 @@ export default function Dashboard() {
       } else {
         setError(data.message || "Failed to join course");
       }
-    } catch (err) {
+    } catch (_err) {
       setError("Network error occurred");
     }
   };

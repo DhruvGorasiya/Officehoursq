@@ -22,8 +22,9 @@ interface KnowledgeBaseItem {
 const PAGE_SIZE = 20;
 
 export default function CourseKnowledgeBasePage() {
-  const { user, token } = useAuth();
+  const { user: _user, token, role: _role } = useAuth();
   const params = useParams();
+  const [_course, _setCourse] = useState<any>(null);
   const courseId = params?.id as string;
 
   const [items, setItems] = useState<KnowledgeBaseItem[]>([]);
@@ -66,8 +67,8 @@ export default function CourseKnowledgeBasePage() {
         } else {
           setError(res.message || "Failed to load knowledge base");
         }
-      } catch (e) {
-        setError("Network error loading knowledge base");
+      } catch (_e) {
+      console.error(_e);setError("Network error loading knowledge base");
       } finally {
         setLoading(false);
       }

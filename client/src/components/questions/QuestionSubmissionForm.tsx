@@ -166,7 +166,7 @@ export default function QuestionSubmissionForm({
       } else {
         setError(data.message || "Failed to submit question");
       }
-    } catch (err) {
+    } catch (_err) {
       setError("Network error occurred");
     } finally {
       setIsSubmitting(false);
