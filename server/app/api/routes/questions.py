@@ -575,7 +575,7 @@ async def mark_question_helpful(q_id: str, user: dict = Depends(require_role("st
             supabase.table("helpful_votes").insert(
                 {"question_id": q_res.data["id"], "student_id": student_id}
             ).execute()
-        except Exception as e:
+        except Exception as _e:
             # Assume any insert error here is due to unique constraint (already voted)
             return JSONResponse(
                 status_code=400,

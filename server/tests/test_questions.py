@@ -28,7 +28,7 @@ Route implementation notes (from questions.py):
 """
 
 import uuid
-import pytest
+import pytest  # noqa: F401
 from httpx import AsyncClient
 
 QUESTIONS_BASE = "/api/v1/questions"

@@ -19,7 +19,7 @@ Notes on design decisions:
 
 import uuid
 from unittest.mock import patch
-import pytest
+import pytest  # noqa: F401
 from httpx import AsyncClient
 
 from app.core.database import supabase

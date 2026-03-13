@@ -16,7 +16,7 @@ FastAPI behaviour notes (confirmed from route source):
 """
 
 import uuid
-import pytest
+import pytest  # noqa: F401
 from httpx import AsyncClient
 
 BASE = "/api/v1/courses"

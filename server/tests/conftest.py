@@ -15,7 +15,7 @@ Design decisions:
 
 import asyncio
 import uuid
-import pytest
+import pytest  # noqa: F401
 import pytest_asyncio
 from httpx import AsyncClient, ASGITransport
 

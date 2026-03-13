@@ -19,7 +19,7 @@ Route implementation notes (from knowledge_base.py):
 """
 
 import uuid
-import pytest
+import pytest  # noqa: F401
 import pytest_asyncio
 from httpx import AsyncClient
 

@@ -10,7 +10,7 @@ Uses the real Supabase project — no mocking.
 """
 
 import uuid
-import pytest
+import pytest  # noqa: F401
 import pytest_asyncio
 from httpx import AsyncClient
 
