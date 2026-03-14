@@ -6,6 +6,10 @@ Real-time office hours queue management system for university courses. Three rol
 
 https://youtu.be/nLZI8-vQQw4
 
+### Linkedin Blog Post
+
+https://www.linkedin.com/posts/dhruvgorasiya_we-sat-in-office-hours-for-40-minutes-la[…]m=member_desktop&rcm=ACoAADlU_pAB-97_I52bpF29lLa7M4LWPtTqG6A
+
 ### Tech Stack
 
 | Layer        | Technology                                                                 |
