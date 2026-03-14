@@ -8,7 +8,7 @@ https://youtu.be/nLZI8-vQQw4
 
 ### Linkedin Blog Post
 
-https://www.linkedin.com/posts/dhruvgorasiya_we-sat-in-office-hours-for-40-minutes-la[…]m=member_desktop&rcm=ACoAADlU_pAB-97_I52bpF29lLa7M4LWPtTqG6A
+https://www.linkedin.com/posts/dhruvgorasiya_we-sat-in-office-hours-for-40-minutes-last-activity-7438412040991473664-tkQg?utm_source=share&utm_medium=member_desktop&rcm=ACoAADXEru8B4wq3UiQTVg6t_yTHlowZCcSoP6A
 
 ### Tech Stack
 
