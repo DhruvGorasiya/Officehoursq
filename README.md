@@ -16,6 +16,8 @@ https://youtu.be/nLZI8-vQQw4
 | Realtime    | Supabase Realtime broadcast channels (`session:{id}`, `user:{id}`, etc.)   |
 | Auth        | Supabase Auth (JWT), validated server-side with `supabase.auth.get_user`   |
 
+Development was carried out using two AI-assisted modalities: **[Cursor](https://cursor.com)** and **[Claude.ai](https://claude.ai)**.
+
 ### Monorepo Structure
 
 ```text
@@ -215,6 +217,20 @@ npm run dev
 ```
 
 The app will be available at `http://localhost:3000`.
+
+---
+
+## Deployed Backend & API Docs
+
+The backend is deployed at **https://officehoursq.onrender.com**. You can use the following URLs to explore and test the API:
+
+| URL | Description |
+|-----|-------------|
+| [**https://officehoursq.onrender.com/docs**](https://officehoursq.onrender.com/docs) | **Swagger UI** – interactive API documentation; try endpoints and authorize with a JWT. |
+| [**https://officehoursq.onrender.com/redoc**](https://officehoursq.onrender.com/redoc) | **ReDoc** – alternative API documentation view. |
+| **https://officehoursq.onrender.com/api/v1/openapi.json** | OpenAPI 3 schema (JSON). |
+
+The API base URL for the deployed backend is `https://officehoursq.onrender.com/api/v1`. On the free tier, the service may take 30–60 seconds to wake up on the first request.
 
 ---
 

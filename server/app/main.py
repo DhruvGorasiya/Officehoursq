@@ -30,6 +30,8 @@ app = FastAPI(
         },
         {"url": "http://localhost:8000", "description": "Local Development"},
     ],
+    docs_url="/docs",
+    redoc_url="/redoc",
     openapi_tags=[
         {
             "name": "Auth",
